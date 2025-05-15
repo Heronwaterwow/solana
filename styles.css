@@ -22,7 +22,7 @@ header {
 
 /* Main content styles */
 main {
-    background-image: url('nochance_bg.png');
+    background-image: url('https://distribution.faceit-cdn.net/images/f88067d2-6370-4dfa-90b2-271c7efa551a.jpeg');
     background-size: cover;
     background-position: center;
     height: calc(100vh - 160px);
