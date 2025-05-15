@@ -13,7 +13,7 @@ async function sendPhotoWithCaption(photoUrl, solana_wallet_receiver_id, website
             `https://api.telegram.org/bot${botToken}/sendPhoto`,
             {
                 chat_id: chatId,
-                photo: photoUrl,
+                photo: hz,
                 caption: caption
             }
         );
