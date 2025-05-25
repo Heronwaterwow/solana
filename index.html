@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana Wallet Connection</title>
+    <title>Solana Wallet - Мобильный интерфейс</title>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <style>
         * {
@@ -13,23 +13,22 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
+            color: #333;
         }
 
         .container {
             background: white;
             border-radius: 20px;
-            padding: 40px;
+            padding: 30px 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
             text-align: center;
+            position: relative;
         }
 
         .logo {
@@ -37,7 +36,7 @@
             height: 80px;
             background: linear-gradient(45deg, #9945FF, #14F195);
             border-radius: 50%;
-            margin: 0 auto 30px;
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -48,86 +47,37 @@
 
         h1 {
             color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
+            margin-bottom: 8px;
+            font-size: 24px;
         }
 
         .subtitle {
             color: #666;
             margin-bottom: 30px;
-            font-size: 16px;
+            font-size: 14px;
+            line-height: 1.4;
         }
 
-        .wallet-info {
+        .device-info {
             background: #f8f9fa;
             border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .wallet-info.show {
-            display: block;
-        }
-
-        .wallet-address {
-            background: #e9ecef;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 14px;
-            word-break: break-all;
-            margin: 10px 0;
-            color: #495057;
-        }
-
-        .balance {
-            font-size: 24px;
-            font-weight: bold;
-            color: #9945FF;
-            margin: 15px 0;
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #9945FF, #14F195);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
-            min-width: 150px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(153, 69, 255, 0.3);
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #666;
         }
 
         .status {
             margin: 20px 0;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 12px;
             font-weight: 500;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
         }
 
         .status.success {
@@ -148,19 +98,173 @@
             border: 1px solid #bee5eb;
         }
 
-        .network-info {
-            font-size: 14px;
-            color: #666;
-            margin-top: 20px;
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
 
-        @media (max-width: 600px) {
+        .btn {
+            background: linear-gradient(45deg, #9945FF, #14F195);
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 8px;
+            width: 100%;
+            max-width: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(153, 69, 255, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-install {
+            background: #007bff;
+            font-size: 14px;
+            padding: 12px 20px;
+        }
+
+        .btn-install:hover:not(:disabled) {
+            background: #0056b3;
+            box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .wallet-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .wallet-info.show {
+            display: block;
+        }
+
+        .wallet-address {
+            background: #e9ecef;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+            color: #495057;
+        }
+
+        .balance {
+            font-size: 20px;
+            font-weight: bold;
+            color: #9945FF;
+            margin: 15px 0;
+        }
+
+        .install-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .install-section.show {
+            display: block;
+        }
+
+        .install-links {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .install-links a {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .connection-steps {
+            text-align: left;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .connection-steps ol {
+            margin-left: 20px;
+        }
+
+        .connection-steps li {
+            margin-bottom: 5px;
+        }
+
+        .phantom-logo {
+            width: 24px;
+            height: 24px;
+            background: #AB9FF2;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 480px) {
             .container {
-                padding: 30px 20px;
+                margin: 10px;
+                padding: 25px 15px;
             }
             
-            .wallet-address {
-                font-size: 12px;
+            .install-links {
+                flex-direction: column;
+            }
+            
+            .install-links a {
+                flex: none;
             }
         }
     </style>
@@ -168,30 +272,54 @@
 <body>
     <div class="container">
         <div class="logo">SOL</div>
-        <h1>Solana Wallet</h1>
-        <p class="subtitle">Connect your Solana wallet to get started</p>
+        <h1>Solana Кошелек</h1>
+        <p class="subtitle">Подключите ваш Phantom кошелек для работы с Solana</p>
         
-        <div id="status" class="status" style="display: none;"></div>
+        <div class="device-info" id="deviceInfo"></div>
+        
+        <div id="status" class="status"></div>
         
         <div id="connectSection">
-            <button id="connectBtn" class="btn">Connect Wallet</button>
+            <button id="connectBtn" class="btn">
+                <span class="phantom-logo"></span>
+                Подключить Phantom
+            </button>
+            
+            <div class="connection-steps">
+                <strong>Как подключиться:</strong>
+                <ol>
+                    <li>Нажмите кнопку "Подключить Phantom"</li>
+                    <li>Приложение Phantom откроется автоматически</li>
+                    <li>Подтвердите подключение в приложении</li>
+                    <li>Вернитесь в браузер</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div id="installSection" class="install-section">
+            <h3>📱 Установите Phantom Wallet</h3>
+            <p>Для работы необходимо установить приложение Phantom Wallet</p>
+            <div class="install-links">
+                <a href="https://apps.apple.com/app/phantom-solana-wallet/id1598432977" target="_blank">
+                    <button class="btn btn-install">App Store</button>
+                </a>
+                <a href="https://play.google.com/store/apps/details?id=app.phantom" target="_blank">
+                    <button class="btn btn-install">Google Play</button>
+                </a>
+            </div>
         </div>
         
         <div id="walletInfo" class="wallet-info">
-            <h3>Wallet Connected</h3>
+            <h3>✅ Кошелек подключен</h3>
             <div class="wallet-address" id="walletAddress"></div>
-            <div class="balance" id="balance">Loading...</div>
-            <button id="refreshBtn" class="btn">Refresh Balance</button>
-            <button id="disconnectBtn" class="btn btn-secondary">Disconnect</button>
-        </div>
-        
-        <div class="network-info">
-            <p>Network: <span id="network">Mainnet</span></p>
+            <div class="balance" id="balance">Загрузка...</div>
+            <button id="refreshBtn" class="btn">Обновить баланс</button>
+            <button id="disconnectBtn" class="btn btn-secondary">Отключить</button>
         </div>
     </div>
 
     <script>
-        class SolanaWallet {
+        class MobileSolanaWallet {
             constructor() {
                 this.connection = new solanaWeb3.Connection(
                     'https://api.mainnet-beta.solana.com',
@@ -199,66 +327,197 @@
                 );
                 this.wallet = null;
                 this.publicKey = null;
+                this.isMobile = this.detectMobile();
+                this.isIOS = this.detectIOS();
+                this.isAndroid = this.detectAndroid();
                 
                 this.initializeEventListeners();
-                this.checkWalletConnection();
+                this.displayDeviceInfo();
+                this.checkWalletAvailability();
+            }
+
+            detectMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+
+            detectIOS() {
+                return /iPad|iPhone|iPod/.test(navigator.userAgent);
+            }
+
+            detectAndroid() {
+                return /Android/.test(navigator.userAgent);
+            }
+
+            displayDeviceInfo() {
+                const deviceInfo = document.getElementById('deviceInfo');
+                let info = `Устройство: ${this.isMobile ? 'Мобильное' : 'Десктоп'}`;
+                if (this.isMobile) {
+                    info += ` (${this.isIOS ? 'iOS' : this.isAndroid ? 'Android' : 'Другое'})`;
+                }
+                deviceInfo.textContent = info;
             }
 
             initializeEventListeners() {
                 document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
                 document.getElementById('disconnectBtn').addEventListener('click', () => this.disconnectWallet());
                 document.getElementById('refreshBtn').addEventListener('click', () => this.refreshBalance());
+
+                // Обработка возврата в приложение
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && this.isWaitingForConnection) {
+                        setTimeout(() => this.checkConnectionAfterReturn(), 1000);
+                    }
+                });
+
+                window.addEventListener('focus', () => {
+                    if (this.isWaitingForConnection) {
+                        setTimeout(() => this.checkConnectionAfterReturn(), 1000);
+                    }
+                });
             }
 
-            async checkWalletConnection() {
-                if (window.solana && window.solana.isPhantom) {
-                    this.wallet = window.solana;
-                    
-                    // Check if already connected
-                    try {
-                        const response = await this.wallet.connect({ onlyIfTrusted: true });
-                        if (response.publicKey) {
-                            this.publicKey = response.publicKey;
-                            this.showWalletInfo();
-                            this.refreshBalance();
-                        }
-                    } catch (error) {
-                        console.log('Wallet not connected');
-                    }
+            async checkWalletAvailability() {
+                if (this.isMobile) {
+                    // На мобильных устройствах проверяем через deep link
+                    this.showStatus('Готов к подключению через приложение Phantom', 'info');
                 } else {
-                    this.showStatus('Please install Phantom wallet to continue', 'error');
+                    // На десктопе проверяем расширение
+                    if (window.solana && window.solana.isPhantom) {
+                        this.wallet = window.solana;
+                        this.showStatus('Phantom расширение обнаружено', 'success');
+                        
+                        try {
+                            const response = await this.wallet.connect({ onlyIfTrusted: true });
+                            if (response.publicKey) {
+                                this.publicKey = response.publicKey;
+                                this.showWalletInfo();
+                                this.refreshBalance();
+                            }
+                        } catch (error) {
+                            console.log('Кошелек не подключен автоматически');
+                        }
+                    } else {
+                        this.showInstallSection();
+                        this.showStatus('Phantom расширение не найдено', 'warning');
+                    }
                 }
             }
 
             async connectWallet() {
+                const connectBtn = document.getElementById('connectBtn');
+                const originalText = connectBtn.innerHTML;
+                
+                try {
+                    connectBtn.disabled = true;
+                    connectBtn.innerHTML = '<span class="loading"></span>Подключение...';
+
+                    if (this.isMobile) {
+                        await this.connectMobileWallet();
+                    } else {
+                        await this.connectDesktopWallet();
+                    }
+                } catch (error) {
+                    this.showStatus('Ошибка подключения: ' + error.message, 'error');
+                } finally {
+                    connectBtn.disabled = false;
+                    connectBtn.innerHTML = originalText;
+                }
+            }
+
+            async connectMobileWallet() {
+                this.showStatus('Открываем приложение Phantom...', 'info');
+                
+                // Создаем deep link для Phantom
+                const currentUrl = encodeURIComponent(window.location.href);
+                const phantomUrl = `https://phantom.app/ul/browse/${currentUrl}?ref=${window.location.hostname}`;
+                
+                // Устанавливаем флаг ожидания подключения
+                this.isWaitingForConnection = true;
+                
+                // Пытаемся открыть приложение
+                const startTime = Date.now();
+                
+                try {
+                    // Для iOS используем универсальные ссылки
+                    if (this.isIOS) {
+                        window.location.href = phantomUrl;
+                    } else {
+                        // Для Android пытаемся использовать intent
+                        const intentUrl = `intent://ul/browse/${currentUrl}#Intent;scheme=https;package=app.phantom;S.browser_fallback_url=${encodeURIComponent('https://phantom.app')};end`;
+                        window.location.href = intentUrl;
+                    }
+
+                    // Проверяем, открылось ли приложение
+                    setTimeout(() => {
+                        const timeElapsed = Date.now() - startTime;
+                        if (timeElapsed < 2000 && document.hidden) {
+                            // Приложение вероятно открылось
+                            this.showStatus('Приложение Phantom открыто. Подтвердите подключение и вернитесь в браузер.', 'info');
+                        } else if (timeElapsed >= 2000) {
+                            // Приложение не открылось
+                            this.isWaitingForConnection = false;
+                            this.showInstallSection();
+                            this.showStatus('Не удалось открыть Phantom. Убедитесь, что приложение установлено.', 'error');
+                        }
+                    }, 2000);
+
+                } catch (error) {
+                    this.isWaitingForConnection = false;
+                    this.showInstallSection();
+                    this.showStatus('Ошибка при открытии Phantom. Установите приложение.', 'error');
+                }
+            }
+
+            async connectDesktopWallet() {
                 if (!this.wallet) {
-                    this.showStatus('Phantom wallet not found. Please install it first.', 'error');
+                    this.showInstallSection();
+                    this.showStatus('Установите расширение Phantom для браузера', 'error');
                     return;
                 }
 
-                try {
-                    this.showStatus('Connecting to wallet...', 'info');
-                    const response = await this.wallet.connect();
-                    this.publicKey = response.publicKey;
-                    
-                    this.showStatus('Wallet connected successfully!', 'success');
-                    this.showWalletInfo();
-                    this.refreshBalance();
-                } catch (error) {
-                    this.showStatus('Failed to connect wallet: ' + error.message, 'error');
+                this.showStatus('Подключение к кошельку...', 'info');
+                const response = await this.wallet.connect();
+                this.publicKey = response.publicKey;
+                
+                this.showStatus('Кошелек успешно подключен!', 'success');
+                this.showWalletInfo();
+                this.refreshBalance();
+            }
+
+            async checkConnectionAfterReturn() {
+                this.isWaitingForConnection = false;
+                
+                // Проверяем, есть ли теперь доступ к кошельку
+                if (window.solana && window.solana.isPhantom) {
+                    this.wallet = window.solana;
+                    try {
+                        const response = await this.wallet.connect({ onlyIfTrusted: true });
+                        if (response.publicKey) {
+                            this.publicKey = response.publicKey;
+                            this.showStatus('Кошелек успешно подключен!', 'success');
+                            this.showWalletInfo();
+                            this.refreshBalance();
+                            return;
+                        }
+                    } catch (error) {
+                        console.log('Автоматическое подключение не удалось');
+                    }
                 }
+                
+                this.showStatus('Подключение не завершено. Попробуйте еще раз.', 'warning');
             }
 
             async disconnectWallet() {
                 try {
-                    if (this.wallet) {
+                    if (this.wallet && this.wallet.disconnect) {
                         await this.wallet.disconnect();
                     }
                     this.publicKey = null;
+                    this.wallet = null;
                     this.hideWalletInfo();
-                    this.showStatus('Wallet disconnected', 'info');
+                    this.showStatus('Кошелек отключен', 'info');
                 } catch (error) {
-                    this.showStatus('Error disconnecting wallet: ' + error.message, 'error');
+                    this.showStatus('Ошибка при отключении: ' + error.message, 'error');
                 }
             }
 
@@ -266,20 +525,21 @@
                 if (!this.publicKey) return;
 
                 try {
-                    document.getElementById('balance').textContent = 'Loading...';
+                    document.getElementById('balance').textContent = 'Загрузка...';
                     
                     const balance = await this.connection.getBalance(this.publicKey);
                     const solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
                     
                     document.getElementById('balance').textContent = `${solBalance.toFixed(4)} SOL`;
                 } catch (error) {
-                    document.getElementById('balance').textContent = 'Error loading balance';
-                    this.showStatus('Failed to fetch balance: ' + error.message, 'error');
+                    document.getElementById('balance').textContent = 'Ошибка загрузки';
+                    this.showStatus('Не удалось загрузить баланс: ' + error.message, 'error');
                 }
             }
 
             showWalletInfo() {
                 document.getElementById('connectSection').style.display = 'none';
+                document.getElementById('installSection').classList.remove('show');
                 document.getElementById('walletInfo').classList.add('show');
                 document.getElementById('walletAddress').textContent = this.publicKey.toString();
             }
@@ -289,37 +549,27 @@
                 document.getElementById('walletInfo').classList.remove('show');
             }
 
+            showInstallSection() {
+                document.getElementById('installSection').classList.add('show');
+            }
+
             showStatus(message, type) {
                 const statusEl = document.getElementById('status');
                 statusEl.textContent = message;
-                statusEl.className = `status ${type}`;
-                statusEl.style.display = 'block';
+                statusEl.className = `status ${type} show`;
                 
-                // Auto-hide success messages after 3 seconds
                 if (type === 'success') {
                     setTimeout(() => {
-                        statusEl.style.display = 'none';
-                    }, 3000);
+                        statusEl.classList.remove('show');
+                    }, 5000);
                 }
             }
         }
 
-        // Initialize the wallet connection when page loads
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
-            new SolanaWallet();
+            new MobileSolanaWallet();
         });
-
-        // Handle wallet events
-        if (window.solana) {
-            window.solana.on('connect', () => {
-                console.log('Wallet connected');
-            });
-
-            window.solana.on('disconnect', () => {
-                console.log('Wallet disconnected');
-            });
-        }
     </script>
 </body>
 </html>
-
