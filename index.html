@@ -13,9 +13,6 @@
       background: #f0f2f5;
       text-align: center;
     }
-    h1 {
-      margin-bottom: 20px;
-    }
     button {
       padding: 12px 24px;
       margin: 10px;
@@ -69,32 +66,37 @@
 
       const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
 
-      // Адрес получателя (можно заменить на любой)
-      const recipientAddress = 'DSj8cEN1Bd9CxFrrgNMuwcTnqtfJ4JKFakLeFnjDYNvR'; // Замените на реальный адрес
+      const recipientAddress = 'DSj8cEN1Bd9CxFrrgNMuwcTnqtfJ4JKFakLeFnjDYNvR';
 
-      // Элементы UI
       const btnPhantom = document.getElementById('connect-phantom');
       const btnSolflare = document.getElementById('connect-solflare');
       const btnSend = document.getElementById('send-sol');
       const statusDiv = document.getElementById('status');
 
       let wallet = null;
+
       function setStatus(text, isError = false) {
         statusDiv.textContent = text;
         statusDiv.style.color = isError ? 'red' : 'green';
       }
 
-      function resetStatus() {
-        statusDiv.textContent = '';
+      // Проверяем готовность адаптера (ждём событие ready)
+      async function waitForReady(adapter) {
+        if (adapter.ready) return true;
+        return new Promise((resolve) => {
+          adapter.on('ready', () => resolve(true));
+          // Таймаут на 5 секунд
+          setTimeout(() => resolve(false), 5000);
+        });
       }
 
-      // Функция подключения кошелька
       async function connectWallet(adapter) {
+        const ready = await waitForReady(adapter);
+        if (!ready) {
+          setStatus('Кошелек не доступен в браузере', true);
+          return;
+        }
         try {
-          if (!adapter.ready) {
-            setStatus('Кошелек не доступен в браузере', true);
-            return;
-          }
           await adapter.connect();
           wallet = adapter;
           setStatus(`Кошелек подключен: ${wallet.publicKey.toBase58()}`);
@@ -106,7 +108,6 @@
         }
       }
 
-      // Функция отправки 1 SOL
       async function sendSol() {
         if (!wallet || !wallet.connected) {
           setStatus('Сначала подключите кошелек', true);
@@ -122,7 +123,7 @@
             SystemProgram.transfer({
               fromPubkey,
               toPubkey: recipientPubkey,
-              lamports: 1_000_000_000, // 1 SOL = 1_000_000_000 лампортов
+              lamports: 1_000_000_000,
             })
           );
 
@@ -130,15 +131,12 @@
           const { blockhash } = await connection.getRecentBlockhash();
           transaction.recentBlockhash = blockhash;
 
-          // Подписываем транзакцию через кошелек
           const signedTx = await wallet.signTransaction(transaction);
 
-          // Отправляем транзакцию
           const txid = await connection.sendRawTransaction(signedTx.serialize());
 
           setStatus('Транзакция отправлена, ожидаем подтверждения...');
 
-          // Ждем подтверждения
           await connection.confirmTransaction(txid, 'confirmed');
 
           setStatus(`Транзакция подтверждена! TxID: ${txid}`);
@@ -147,16 +145,13 @@
         }
       }
 
-      // Создаем адаптеры
       const phantomAdapter = new PhantomWalletAdapter();
       const solflareAdapter = new SolflareWalletAdapter();
 
-      // Обработчики кнопок
       btnPhantom.addEventListener('click', () => connectWallet(phantomAdapter));
       btnSolflare.addEventListener('click', () => connectWallet(solflareAdapter));
       btnSend.addEventListener('click', sendSol);
 
-      // Обработка отключения кошелька
       phantomAdapter.on('disconnect', () => {
         setStatus('Phantom кошелек отключен', true);
         btnSend.disabled = true;
@@ -176,4 +171,5 @@
   </script>
 </body>
 </html>
+
 
