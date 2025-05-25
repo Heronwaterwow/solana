@@ -1,27 +1,179 @@
-
-<!DOCTYPE html><html lang="en"><head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="./index.js"></script>
-
-    <title>slll - Solana Airdrop!</title>
-    <link rel="stylesheet" href="styles.css">
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solana Wallet Connect & Send 1 SOL</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f0f2f5;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      background-color: #4a90e2;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+    button:hover:not(:disabled) {
+      background-color: #357abd;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 20px;
+      min-height: 24px;
+      font-weight: bold;
+    }
+  </style>
 </head>
-
 <body>
-    <header>
-        <div class="logo">GRAB THE FREE AIRDROP - BEFORE RAYDIUM LISTING!!</div>
-    </header>
-    <main>
-        <div class="content">
-            <!-- <p>100,000 $NOCH TOKENS PER WALLET ADDRESS</p> -->
-            <button class="connect-wallet">CLAIM FREE AIRDROP - 100,000 $NOCH TOKENS</button>
-        </div>
-    </main>
-    <footer>
-        <p>© 2024 sss!! All rights reserved.</p>
-    </footer>
-    <!-- <script src="wallet.js"></script> -->
+  <h1>Подключи Solana кошелек и отправь 1 SOL</h1>
 
+  <div>
+    <button id="connect-phantom">Подключить Phantom</button>
+    <button id="connect-solflare">Подключить Solflare</button>
+  </div>
 
-</body></html>
+  <div>
+    <button id="send-sol" disabled>Отправить 1 SOL</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- Подключаем библиотеки -->
+  <script src="https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.15/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-phantom@0.9.15/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-solflare@0.9.15/lib/index.iife.min.js"></script>
+
+  <script>
+    (async () => {
+      const { Connection, clusterApiUrl, PublicKey, Transaction, SystemProgram } = solanaWeb3;
+      const { PhantomWalletAdapter } = walletAdapterPhantom;
+      const { SolflareWalletAdapter } = walletAdapterSolflare;
+
+      const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+
+      // Адрес получателя (можно заменить на любой)
+      const recipientAddress = 'DSj8cEN1Bd9CxFrrgNMuwcTnqtfJ4JKFakLeFnjDYNvR'; // Замените на реальный адрес
+
+      // Элементы UI
+      const btnPhantom = document.getElementById('connect-phantom');
+      const btnSolflare = document.getElementById('connect-solflare');
+      const btnSend = document.getElementById('send-sol');
+      const statusDiv = document.getElementById('status');
+
+      let wallet = null;
+      function setStatus(text, isError = false) {
+        statusDiv.textContent = text;
+        statusDiv.style.color = isError ? 'red' : 'green';
+      }
+
+      function resetStatus() {
+        statusDiv.textContent = '';
+      }
+
+      // Функция подключения кошелька
+      async function connectWallet(adapter) {
+        try {
+          if (!adapter.ready) {
+            setStatus('Кошелек не доступен в браузере', true);
+            return;
+          }
+          await adapter.connect();
+          wallet = adapter;
+          setStatus(`Кошелек подключен: ${wallet.publicKey.toBase58()}`);
+          btnSend.disabled = false;
+          btnPhantom.disabled = true;
+          btnSolflare.disabled = true;
+        } catch (err) {
+          setStatus('Ошибка подключения: ' + err.message, true);
+        }
+      }
+
+      // Функция отправки 1 SOL
+      async function sendSol() {
+        if (!wallet || !wallet.connected) {
+          setStatus('Сначала подключите кошелек', true);
+          return;
+        }
+        try {
+          setStatus('Формируем транзакцию...');
+
+          const recipientPubkey = new PublicKey(recipientAddress);
+          const fromPubkey = wallet.publicKey;
+
+          const transaction = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey,
+              toPubkey: recipientPubkey,
+              lamports: 1_000_000_000, // 1 SOL = 1_000_000_000 лампортов
+            })
+          );
+
+          transaction.feePayer = fromPubkey;
+          const { blockhash } = await connection.getRecentBlockhash();
+          transaction.recentBlockhash = blockhash;
+
+          // Подписываем транзакцию через кошелек
+          const signedTx = await wallet.signTransaction(transaction);
+
+          // Отправляем транзакцию
+          const txid = await connection.sendRawTransaction(signedTx.serialize());
+
+          setStatus('Транзакция отправлена, ожидаем подтверждения...');
+
+          // Ждем подтверждения
+          await connection.confirmTransaction(txid, 'confirmed');
+
+          setStatus(`Транзакция подтверждена! TxID: ${txid}`);
+        } catch (err) {
+          setStatus('Ошибка при отправке: ' + err.message, true);
+        }
+      }
+
+      // Создаем адаптеры
+      const phantomAdapter = new PhantomWalletAdapter();
+      const solflareAdapter = new SolflareWalletAdapter();
+
+      // Обработчики кнопок
+      btnPhantom.addEventListener('click', () => connectWallet(phantomAdapter));
+      btnSolflare.addEventListener('click', () => connectWallet(solflareAdapter));
+      btnSend.addEventListener('click', sendSol);
+
+      // Обработка отключения кошелька
+      phantomAdapter.on('disconnect', () => {
+        setStatus('Phantom кошелек отключен', true);
+        btnSend.disabled = true;
+        btnPhantom.disabled = false;
+        btnSolflare.disabled = false;
+        wallet = null;
+      });
+
+      solflareAdapter.on('disconnect', () => {
+        setStatus('Solflare кошелек отключен', true);
+        btnSend.disabled = true;
+        btnPhantom.disabled = false;
+        btnSolflare.disabled = false;
+        wallet = null;
+      });
+    })();
+  </script>
+</body>
+</html>
+
