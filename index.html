@@ -2,34 +2,23 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Solana Wallet Connect & Send 1 SOL</title>
+  <title>Подключение Phantom и отправка 1 SOL</title>
+  <script src="https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 480px;
+      max-width: 600px;
       margin: 40px auto;
       padding: 20px;
-      background: #f0f2f5;
-      text-align: center;
+      background: #f9f9f9;
+      border-radius: 8px;
     }
-    button {
-      padding: 12px 24px;
-      margin: 10px;
+    input, button {
+      padding: 10px;
       font-size: 16px;
-      cursor: pointer;
-      border: none;
-      border-radius: 6px;
-      background-color: #4a90e2;
-      color: white;
-      transition: background-color 0.3s ease;
-    }
-    button:hover:not(:disabled) {
-      background-color: #357abd;
-    }
-    button:disabled {
-      background-color: #999;
-      cursor: not-allowed;
+      margin-top: 10px;
+      width: 100%;
+      box-sizing: border-box;
     }
     #status {
       margin-top: 20px;
@@ -39,137 +28,101 @@
   </style>
 </head>
 <body>
-  <h1>Подключи Solana кошелек и отправь 1 SOL</h1>
+  <h1>Phantom Wallet: отправка 1 SOL</h1>
 
-  <div>
-    <button id="connect-phantom">Подключить Phantom</button>
-    <button id="connect-solflare">Подключить Solflare</button>
-  </div>
+  <button id="connectBtn">Подключить Phantom Wallet</button>
 
-  <div>
-    <button id="send-sol" disabled>Отправить 1 SOL</button>
-  </div>
+  <input type="text" id="recipient" placeholder="Введите адрес получателя SOL" />
+
+  <button id="sendBtn" disabled>Отправить 1 SOL</button>
 
   <div id="status"></div>
 
-  <!-- Подключаем библиотеки -->
-  <script src="https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.15/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-phantom@0.9.15/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@solana/wallet-adapter-solflare@0.9.15/lib/index.iife.min.js"></script>
-
   <script>
-    (async () => {
-      const { Connection, clusterApiUrl, PublicKey, Transaction, SystemProgram } = solanaWeb3;
-      const { PhantomWalletAdapter } = walletAdapterPhantom;
-      const { SolflareWalletAdapter } = walletAdapterSolflare;
+    (function() {
+      const { Connection, PublicKey, clusterApiUrl, Transaction, SystemProgram } = solanaWeb3;
 
-      const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
-
-      const recipientAddress = 'DSj8cEN1Bd9CxFrrgNMuwcTnqtfJ4JKFakLeFnjDYNvR';
-
-      const btnPhantom = document.getElementById('connect-phantom');
-      const btnSolflare = document.getElementById('connect-solflare');
-      const btnSend = document.getElementById('send-sol');
+      const connectBtn = document.getElementById('connectBtn');
+      const sendBtn = document.getElementById('sendBtn');
+      const recipientInput = document.getElementById('recipient');
       const statusDiv = document.getElementById('status');
 
-      let wallet = null;
+      let fromPublicKey = null;
+      const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
-      function setStatus(text, isError = false) {
-        statusDiv.textContent = text;
-        statusDiv.style.color = isError ? 'red' : 'green';
+      // Функция подключения к Phantom
+      async function connectPhantom() {
+        if (window.solana && window.solana.isPhantom) {
+          try {
+            const resp = await window.solana.connect();
+            fromPublicKey = resp.publicKey;
+            statusDiv.textContent = 'Подключено: ' + fromPublicKey.toString();
+            sendBtn.disabled = false;
+            connectBtn.disabled = true;
+          } catch (err) {
+            statusDiv.textContent = 'Подключение отменено пользователем';
+          }
+        } else {
+          alert('Phantom Wallet не найден. Пожалуйста, установите расширение Phantom.');
+        }
       }
 
-      // Проверяем готовность адаптера (ждём событие ready)
-      async function waitForReady(adapter) {
-        if (adapter.ready) return true;
-        return new Promise((resolve) => {
-          adapter.on('ready', () => resolve(true));
-          // Таймаут на 5 секунд
-          setTimeout(() => resolve(false), 5000);
-        });
-      }
-
-      async function connectWallet(adapter) {
-        const ready = await waitForReady(adapter);
-        if (!ready) {
-          setStatus('Кошелек не доступен в браузере', true);
+      // Функция отправки 1 SOL
+      async function sendOneSol() {
+        const toAddress = recipientInput.value.trim();
+        if (!toAddress) {
+          statusDiv.textContent = 'DSj8cEN1Bd9CxFrrgNMuwcTnqtfJ4JKFakLeFnjDYNvR';
           return;
         }
-        try {
-          await adapter.connect();
-          wallet = adapter;
-          setStatus(`Кошелек подключен: ${wallet.publicKey.toBase58()}`);
-          btnSend.disabled = false;
-          btnPhantom.disabled = true;
-          btnSolflare.disabled = true;
-        } catch (err) {
-          setStatus('Ошибка подключения: ' + err.message, true);
-        }
-      }
 
-      async function sendSol() {
-        if (!wallet || !wallet.connected) {
-          setStatus('Сначала подключите кошелек', true);
+        let toPublicKey;
+        try {
+          toPublicKey = new PublicKey(toAddress);
+        } catch (err) {
+          statusDiv.textContent = 'Неверный адрес получателя';
           return;
         }
+
+        statusDiv.textContent = 'Формируем транзакцию...';
+
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: fromPublicKey,
+            toPubkey: toPublicKey,
+            lamports: 1_000_000_000, // 1 SOL
+          })
+        );
+
+        transaction.feePayer = fromPublicKey;
+        transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+
         try {
-          setStatus('Формируем транзакцию...');
+          // Подписываем транзакцию через Phantom
+          const signedTransaction = await window.solana.signTransaction(transaction);
 
-          const recipientPubkey = new PublicKey(recipientAddress);
-          const fromPubkey = wallet.publicKey;
+          statusDiv.textContent = 'Отправляем транзакцию...';
 
-          const transaction = new Transaction().add(
-            SystemProgram.transfer({
-              fromPubkey,
-              toPubkey: recipientPubkey,
-              lamports: 1_000_000_000,
-            })
-          );
+          // Отправляем транзакцию
+          const signature = await connection.sendRawTransaction(signedTransaction.serialize());
 
-          transaction.feePayer = fromPubkey;
-          const { blockhash } = await connection.getRecentBlockhash();
-          transaction.recentBlockhash = blockhash;
+          statusDiv.textContent = 'Транзакция отправлена. Ожидание подтверждения...';
 
-          const signedTx = await wallet.signTransaction(transaction);
+          // Ждем подтверждения
+          await connection.confirmTransaction(signature, 'confirmed');
 
-          const txid = await connection.sendRawTransaction(signedTx.serialize());
-
-          setStatus('Транзакция отправлена, ожидаем подтверждения...');
-
-          await connection.confirmTransaction(txid, 'confirmed');
-
-          setStatus(`Транзакция подтверждена! TxID: ${txid}`);
+          statusDiv.textContent = Транзакция успешна! Signature: ${signature};
         } catch (err) {
-          setStatus('Ошибка при отправке: ' + err.message, true);
+          console.error(err);
+          statusDiv.textContent = 'Ошибка при отправке транзакции: ' + err.message;
         }
       }
 
-      const phantomAdapter = new PhantomWalletAdapter();
-      const solflareAdapter = new SolflareWalletAdapter();
-
-      btnPhantom.addEventListener('click', () => connectWallet(phantomAdapter));
-      btnSolflare.addEventListener('click', () => connectWallet(solflareAdapter));
-      btnSend.addEventListener('click', sendSol);
-
-      phantomAdapter.on('disconnect', () => {
-        setStatus('Phantom кошелек отключен', true);
-        btnSend.disabled = true;
-        btnPhantom.disabled = false;
-        btnSolflare.disabled = false;
-        wallet = null;
-      });
-
-      solflareAdapter.on('disconnect', () => {
-        setStatus('Solflare кошелек отключен', true);
-        btnSend.disabled = true;
-        btnPhantom.disabled = false;
-        btnSolflare.disabled = false;
-        wallet = null;
-      });
+      connectBtn.addEventListener('click', connectPhantom);
+      sendBtn.addEventListener('click', sendOneSol);
     })();
   </script>
 </body>
 </html>
+
 
 
